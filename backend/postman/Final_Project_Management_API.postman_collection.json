@@ -1,0 +1,332 @@
+{
+	"info": {
+		"_postman_id": "random-id",
+		"name": "Project Management API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"// Check if token exists and is expired",
+					"const token = pm.environment.get('token');",
+					"const tokenExpiry = pm.environment.get('tokenExpiry');",
+					"",
+					"if (!token || !tokenExpiry || new Date().getTime() > parseInt(tokenExpiry)) {",
+					"    // Login credentials",
+					"    const loginRequest = {",
+					"        url: 'http://localhost:5000/auth/login',",
+					"        method: 'POST',",
+					"        header: {",
+					"            'Content-Type': 'application/json'",
+					"        },",
+					"        body: {",
+					"            mode: 'raw',",
+					"            raw: JSON.stringify({",
+					"                email: 'admin@example.com',",
+					"                password: 'admin123'",
+					"            })",
+					"        }",
+					"    };",
+					"",
+					"    pm.sendRequest(loginRequest, (err, res) => {",
+					"        if (err) {",
+					"            console.error(err);",
+					"        } else {",
+					"            const responseJson = res.json();",
+					"            if (responseJson.token) {",
+					"                pm.environment.set('token', responseJson.token);",
+					"                // Set token expiry to 24 hours from now",
+					"                pm.environment.set('tokenExpiry', new Date().getTime() + (24 * 60 * 60 * 1000));",
+					"            }",
+					"        }",
+					"    });",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5000"
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"admin123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:5000/auth/login",
+							"host": ["http://localhost:5000"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"123456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "register"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Projects",
+			"item": [
+				{
+					"name": "Get All Projects",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/projects",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects"]
+						}
+					}
+				},
+				{
+					"name": "Create Project",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Yeni Proje\",\n    \"description\": \"Proje açıklaması\",\n    \"status\": \"Not Started\",\n    \"startDate\": \"2025-04-06\",\n    \"endDate\": \"2025-05-06\",\n    \"team\": []\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/projects",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects"]
+						}
+					}
+				},
+				{
+					"name": "Update Project",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Güncellenmiş Proje Başlığı\",\n    \"description\": \"Güncellenmiş proje açıklaması\",\n    \"status\": \"In Progress\",\n    \"startDate\": \"2025-04-06\",\n    \"endDate\": \"2025-05-06\",\n    \"team\": []\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/projects/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Güncellenecek projenin ID'si"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Project",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/projects/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Silinecek projenin ID'si"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Single Project",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/projects/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Görüntülenecek projenin ID'si"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Tasks",
+			"item": [
+				{
+					"name": "Get Project Tasks",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/projects/:projectId/tasks",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", ":projectId", "tasks"],
+							"variable": [
+								{
+									"key": "projectId",
+									"value": "",
+									"description": "Görevleri listelenecek projenin ID'si"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Yeni Görev\",\n    \"description\": \"Görev açıklaması\",\n    \"status\": \"Yapılacak\",\n    \"assignedTo\": \"user_id\",\n    \"dueDate\": \"2025-05-01\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/projects/:projectId/tasks",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", ":projectId", "tasks"],
+							"variable": [
+								{
+									"key": "projectId",
+									"value": "",
+									"description": "Göreve eklenecek projenin ID'si"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}
