@@ -1,14 +1,15 @@
 import axios from 'axios';
 import storage from '../utils/storage';
 
-const API_URL = 'http://10.14.12.158:5000/api'; // Fiziksel cihaz için yerel IP
+const API_URL = 'http://10.192.189.100:5000/api';///önemli değiştirme 
+
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 saniye timeout
+  timeout: 5000, // 5 saniye timeout (daha kısa süre)
 });
 
 // Request interceptor - token eklemek için
@@ -47,34 +48,51 @@ api.interceptors.response.use(
       response: error.response?.data,
       status: error.response?.status
     });
+
     if (error.response?.status === 401) {
       // Token geçersiz veya süresi dolmuş
       // Logout işlemlerini yapın
       storage.clearAll();
       // TODO: Kullanıcıyı login ekranına yönlendir
     }
+
+    if (!error.response) {
+      // Eğer hiç cevap alınmazsa, ağ hatası
+      console.error('Network Error: Sunucuya bağlanılamıyor');
+    }
+
     return Promise.reject(error);
   }
 );
 
 export const authAPI = {
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
-    const { token, ...userData } = response.data;
-    if (token) {
-      await storage.setToken(token);
-      await storage.setUserData(userData);
+    try {
+      const response = await api.post('/auth/login', credentials);
+      const { token, ...userData } = response.data;
+      if (token) {
+        await storage.setToken(token);
+        await storage.setUserData(userData);
+      }
+      return response;
+    } catch (error) {
+      console.error('Login Error:', error);
+      throw error;
     }
-    return response;
   },
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
-    const { token, ...user } = response.data;
-    if (token) {
-      await storage.setToken(token);
-      await storage.setUserData(user);
+    try {
+      const response = await api.post('/auth/register', userData);
+      const { token, ...user } = response.data;
+      if (token) {
+        await storage.setToken(token);
+        await storage.setUserData(user);
+      }
+      return response;
+    } catch (error) {
+      console.error('Registration Error:', error);
+      throw error;
     }
-    return response;
   },
   logout: async () => {
     await storage.clearAll();

@@ -15,12 +15,21 @@ const ProjectDetailScreen = ({ route, navigation }) => {
   const loadProjectData = async () => {
     try {
       setError('');
+      setLoading(true);
+      console.log('Proje ve görevler yükleniyor...');
       const [projectResponse, tasksResponse] = await Promise.all([
         projectAPI.getProjectById(projectId),
         taskAPI.getProjectTasks(projectId),
       ]);
-      setProject(projectResponse.data);
-      setTasks(tasksResponse.data);
+      console.log('Proje:', projectResponse.data);
+      console.log('Görevler:', tasksResponse.data);
+
+      if (projectResponse.data && tasksResponse.data) {
+        setProject(projectResponse.data);
+        setTasks(tasksResponse.data);
+      } else {
+        throw new Error('Veri boş');
+      }
     } catch (err) {
       console.error('Proje detayı yüklenirken hata:', err);
       setError('Proje detayı yüklenirken bir hata oluştu');
@@ -33,8 +42,8 @@ const ProjectDetailScreen = ({ route, navigation }) => {
   useFocusEffect(
     useCallback(() => {
       if (route.params?.refresh) {
-        loadProjectData(); // Görev oluşturulduğunda ekranı yenile
-        navigation.setParams({ refresh: false }); // Refresh parametresini sıfırla
+        loadProjectData();
+        navigation.setParams({ refresh: false });
       }
     }, [route.params?.refresh])
   );
@@ -99,4 +108,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   createTaskButton: {
-    margin
+    margin: 16,
+  },
+});
+
+export default ProjectDetailScreen;
