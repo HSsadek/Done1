@@ -1,4 +1,0 @@
-# Sadece belirli klasörlerdeki node_modules'u yoksay
-mobile/node_modules/
-web/node_modules/
-backend/node_modules/
