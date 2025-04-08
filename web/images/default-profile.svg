@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150">
+  <!-- Arka plan daire -->
+  <circle cx="75" cy="75" r="75" fill="#e9ecef"/>
+  <!-- Kafa -->
+  <circle cx="75" cy="60" r="30" fill="#adb5bd"/>
+  <!-- Vücut -->
+  <path d="M75,95 C45,95 30,120 30,150 L120,150 C120,120 105,95 75,95 Z" fill="#adb5bd"/>
+</svg>

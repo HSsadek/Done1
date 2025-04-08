@@ -1,0 +1,603 @@
+/* Modern Proje Yönetim Sistemi Stil Dosyası */
+
+/* Genel Stiller ve Değişkenler */
+:root {
+    --primary-color: #4361ee;
+    --primary-hover: #3a56d4;
+    --secondary-color: #3f37c9;
+    --success-color: #4cc9f0;
+    --warning-color: #f72585;
+    --info-color: #4895ef;
+    --danger-color: #f94144;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+    --gray-color: #6c757d;
+    --border-radius: 10px;
+    --box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Temel Stiller */
+body {
+    font-family: var(--font-family);
+    background-color: #f5f7fa;
+    min-height: 100vh;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Navbar Stili */
+.navbar {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 12px 0;
+}
+
+.navbar-dark.bg-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.nav-link {
+    font-weight: 500;
+    transition: var(--transition);
+    position: relative;
+}
+
+.nav-link:after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: white;
+    transition: var(--transition);
+}
+
+.nav-link:hover:after,
+.nav-link.active:after {
+    width: 100%;
+}
+
+/* Kartlar */
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    overflow: hidden;
+    height: 100%;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+    padding: 15px 20px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.card-footer {
+    background-color: white;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 15px 20px;
+}
+
+/* Proje Kartları */
+.project-card {
+    transition: var(--transition);
+    height: 100%;
+    position: relative;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    border: none;
+}
+
+.project-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+}
+
+.project-card .card-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--dark-color);
+}
+
+.project-card .card-text {
+    color: var(--gray-color);
+    margin-bottom: 15px;
+}
+
+.project-card .progress {
+    height: 8px;
+    border-radius: 10px;
+    background-color: #e9ecef;
+    margin-bottom: 15px;
+}
+
+.project-card .progress-bar {
+    background: linear-gradient(to right, var(--primary-color), var(--info-color));
+    border-radius: 10px;
+}
+
+/* Butonlar */
+.btn {
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 500;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-sm {
+    padding: 5px 12px;
+    font-size: 0.875rem;
+}
+
+/* Ekip Üyeleri Etiketleri */
+.team-member-tag {
+    display: inline-block;
+    background-color: rgba(67, 97, 238, 0.1);
+    color: var(--primary-color);
+    padding: 6px 12px;
+    border-radius: 20px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.team-member-tag:hover {
+    background-color: rgba(67, 97, 238, 0.2);
+}
+
+.team-member-tag .remove-member {
+    margin-left: 5px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.team-member-tag .remove-member:hover {
+    opacity: 1;
+}
+
+/* Profil Fotoğrafı Stilleri */
+.profile-image {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid white;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.profile-image:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.profile-image-container {
+    position: relative;
+    display: inline-block;
+    margin: 0 auto;
+}
+
+.profile-image-sm {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.team-members-avatars .badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    background-color: var(--primary-color);
+    transition: var(--transition);
+}
+
+.team-members-avatars .badge:hover {
+    transform: scale(1.1);
+}
+
+/* Kanban Panosu */
+.kanban-board {
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.kanban-column {
+    min-height: 600px;
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    box-shadow: var(--box-shadow);
+}
+
+.kanban-column-header {
+    padding: 15px !important;
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+    font-weight: 600;
+}
+
+.kanban-column-content {
+    min-height: 550px;
+    background-color: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-top: none;
+    border-bottom-left-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+    padding: 15px !important;
+}
+
+/* Görev Kartları */
+.task-card {
+    cursor: grab;
+    transition: var(--transition);
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 12px;
+    padding: 15px;
+}
+
+.task-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.task-card:active {
+    cursor: grabbing;
+}
+
+.task-card .task-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.task-card .task-meta {
+    font-size: 0.8rem;
+    color: var(--gray-color);
+}
+
+/* Sürükle-Bırak Efektleri */
+.task-card.dragging {
+    opacity: 0.7;
+    transform: scale(0.95);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.kanban-column-content.drag-over {
+    background-color: rgba(67, 97, 238, 0.05);
+    border: 2px dashed var(--primary-color);
+}
+
+/* Profil Sayfası Stilleri */
+.profile-image-container {
+    position: relative;
+    display: inline-block;
+}
+
+.profile-image-container img {
+    border-radius: 50%;
+    border: 4px solid white;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+}
+
+.profile-image-container img:hover {
+    transform: scale(1.03);
+}
+
+.profile-image-container .edit-icon {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background-color: white;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: none; /* Kalem ikonunu gizle */
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dee2e6;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.profile-image-container .edit-icon:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Profil Sekmeler */
+.profile-tabs {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--box-shadow);
+}
+
+.profile-tabs .nav-link {
+    padding: 12px 20px;
+    font-weight: 500;
+    color: var(--dark-color);
+    border: none;
+    border-radius: 0;
+    position: relative;
+}
+
+.profile-tabs .nav-link.active {
+    color: var(--primary-color);
+    background-color: white;
+    border-bottom: 3px solid var(--primary-color);
+}
+
+.profile-tabs .nav-link:hover:not(.active) {
+    background-color: rgba(67, 97, 238, 0.05);
+}
+
+.profile-tab-content {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Profil Kart Stilleri */
+.profile-card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    height: 100%;
+    overflow: hidden;
+}
+
+.profile-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    flex: 1 1 30%;
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(76, 201, 240, 0.1));
+    border-radius: var(--border-radius);
+    padding: 15px;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--gray-color);
+    font-weight: 500;
+}
+
+/* Aktivite Listesi */
+.list-group-item {
+    border: none;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: var(--transition);
+}
+
+.list-group-item:hover {
+    transform: translateX(3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.activity-item {
+    border-left: 3px solid #e9ecef;
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+    transition: var(--transition);
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px 15px 15px 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.activity-item:hover {
+    border-left-width: 5px;
+    transform: translateX(3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    background-color: rgba(0, 0, 0, 0.05);
+    color: white;
+}
+
+.task-completed .activity-icon {
+    background-color: var(--success-color);
+}
+
+.project-created .activity-icon {
+    background-color: var(--primary-color);
+}
+
+.task-assigned .activity-icon {
+    background-color: var(--info-color);
+}
+
+.comment-added .activity-icon {
+    background-color: var(--warning-color);
+}
+
+.activity-item.task-completed {
+    border-left-color: var(--success-color);
+}
+
+.activity-item.project-created {
+    border-left-color: var(--primary-color);
+}
+
+.activity-item.task-assigned {
+    border-left-color: var(--info-color);
+}
+
+.activity-item.comment-added {
+    border-left-color: var(--warning-color);
+}
+
+/* Form Elemanları */
+.form-control, .form-select {
+    border-radius: 8px;
+    padding: 10px 15px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: var(--transition);
+}
+
+.form-control:focus, .form-select:focus {
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.25);
+    border-color: var(--primary-color);
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--dark-color);
+}
+
+/* Rozetler */
+.badge {
+    padding: 6px 10px;
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+/* Animasyonlar */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+/* Responsive Ayarlar */
+@media (max-width: 768px) {
+    .kanban-board .row {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    
+    .kanban-column {
+        min-width: 280px;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    .btn {
+        padding: 6px 12px;
+    }
+}
+
+/* Bildirimler */
+.alert {
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    border: none;
+    animation: fadeIn 0.5s ease;
+}
+
+/* Modal Stilleri */
+.modal-content {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 15px 20px;
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 15px 20px;
+}

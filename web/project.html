@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proje Detayı - Proje Yönetim Sistemi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">Proje Yönetim Sistemi</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Profil</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1 id="projectTitle">Proje Detayı</h1>
+                <p id="projectDescription" class="text-muted">Proje açıklaması burada görünecek</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-outline-primary me-2" id="addTaskButton" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                    <i class="bi bi-plus-circle me-2"></i>Yeni Görev Ekle
+                </button>
+                <button class="btn btn-outline-secondary" id="editProjectButton" data-bs-toggle="modal" data-bs-target="#editProjectModal">
+                    <i class="bi bi-pencil me-2"></i>Projeyi Düzenle
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="kanban-board">
+                    <div class="row flex-nowrap overflow-auto pb-3">
+                        <!-- Not Started Column -->
+                        <div class="col-md-3">
+                            <div class="kanban-column" id="notStarted">
+                                <div class="kanban-column-header bg-secondary text-white p-2 rounded-top">
+                                    <h5 class="mb-0">Not Started</h5>
+                                </div>
+                                <div class="kanban-column-content p-2" data-status="notStarted">
+                                    <!-- Tasks will be added here dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- In Progress Column -->
+                        <div class="col-md-3">
+                            <div class="kanban-column" id="inProgress">
+                                <div class="kanban-column-header bg-primary text-white p-2 rounded-top">
+                                    <h5 class="mb-0">In Progress</h5>
+                                </div>
+                                <div class="kanban-column-content p-2" data-status="inProgress">
+                                    <!-- Tasks will be added here dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Test Column -->
+                        <div class="col-md-3">
+                            <div class="kanban-column" id="test">
+                                <div class="kanban-column-header bg-warning text-dark p-2 rounded-top">
+                                    <h5 class="mb-0">Test</h5>
+                                </div>
+                                <div class="kanban-column-content p-2" data-status="test">
+                                    <!-- Tasks will be added here dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Done Column -->
+                        <div class="col-md-3">
+                            <div class="kanban-column" id="done">
+                                <div class="kanban-column-header bg-success text-white p-2 rounded-top">
+                                    <h5 class="mb-0">Done</h5>
+                                </div>
+                                <div class="kanban-column-content p-2" data-status="done">
+                                    <!-- Tasks will be added here dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div class="modal fade" id="addTaskModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Görev Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addTaskForm">
+                        <div class="mb-3">
+                            <label for="taskTitle" class="form-label">Görev Başlığı</label>
+                            <input type="text" class="form-control" id="taskTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="taskDescription" class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="taskDescription" rows="3"></textarea>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="taskStartDate" class="form-label">Başlangıç Tarihi</label>
+                                <input type="date" class="form-control" id="taskStartDate">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="taskEndDate" class="form-label">Bitiş Tarihi</label>
+                                <input type="date" class="form-control" id="taskEndDate">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="taskAssignee" class="form-label">Görev Ataması</label>
+                            <select class="form-select" id="taskAssignee">
+                                <option value="">Seçiniz</option>
+                                <!-- Team members will be added here dynamically -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="saveTaskBtn">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div class="modal fade" id="editProjectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Projeyi Düzenle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editProjectForm">
+                        <div class="mb-3">
+                            <label for="projectName" class="form-label">Proje Adı</label>
+                            <input type="text" class="form-control" id="projectName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="projectDescriptionInput" class="form-label">Proje Açıklaması</label>
+                            <textarea class="form-control" id="projectDescriptionInput" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ekip Üyeleri</label>
+                            <div id="teamMembersContainer">
+                                <!-- Team members will be added here dynamically -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addTeamMemberBtn">
+                                <i class="bi bi-plus-circle me-1"></i>Yeni Üye Ekle
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="saveProjectBtn">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Detail Modal -->
+    <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detailTaskTitle">Görev Detayı</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6>Açıklama</h6>
+                        <p id="detailTaskDescription">Görev açıklaması</p>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Başlangıç Tarihi</h6>
+                            <p id="detailTaskStartDate">-</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Bitiş Tarihi</h6>
+                            <p id="detailTaskEndDate">-</p>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Atanan Kişi</h6>
+                        <p id="detailTaskAssignee">-</p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Durum</h6>
+                        <p id="detailTaskStatus">-</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-primary" id="editTaskBtn">Düzenle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Template -->
+    <template id="taskCardTemplate">
+        <div class="task-card card mb-2" draggable="true">
+            <div class="card-body">
+                <h5 class="card-title task-card-title">Görev Başlığı</h5>
+                <p class="card-text task-card-description text-truncate">Görev açıklaması burada görünecek</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-info task-card-assignee">Atanan Kişi</span>
+                    <small class="text-muted task-card-date">Tarih</small>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Team Member Template -->
+    <template id="teamMemberTemplate">
+        <div class="team-member-item input-group mb-2">
+            <input type="text" class="form-control team-member-input" placeholder="Ekip üyesi adı">
+            <button class="btn btn-outline-danger remove-team-member" type="button">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/project.js"></script>
+</body>
+</html>
