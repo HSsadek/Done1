@@ -9,10 +9,6 @@ import ProjectsScreen from '../screens/ProjectsScreen';
 import ProjectDetailScreen from '../screens/ProjectDetailScreen';
 import CreateProjectScreen from '../screens/CreateProjectScreen';
 import ProjectEditScreen from '../screens/ProjectEditScreen';
-import CreateTask from '../screens/CreateTask';
-
-
-
 
 const Stack = createNativeStackNavigator();
 
@@ -20,7 +16,6 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Login"
         screenOptions={{
           headerStyle: {
             backgroundColor: COLORS.primary,
@@ -42,23 +37,15 @@ const AppNavigator = () => {
           component={ProjectsScreen}
           options={{
             title: 'Projelerim',
-            headerLeft: () => null, // Geri butonunu gizle
           }}
         />
         
         <Stack.Screen
           name="ProjectDetail"
           component={ProjectDetailScreen}
-          options={({ navigation }) => ({
-            title: 'Proje Detayı',
-            headerLeft: () => (
-              <IconButton
-                icon="arrow-left"
-                iconColor={COLORS.white}
-                onPress={() => navigation.goBack()}
-              />
-            ),
-          })}
+          options={{
+            title: 'Proje Detayı'
+          }}
         />
 
         <Stack.Screen
@@ -76,20 +63,11 @@ const AppNavigator = () => {
           })}
         />
 
-<Stack.Screen
-  name="EditProject"
-  component={ProjectEditScreen}
-  options={{ title: 'Proje Düzenle' }}
-/>
-
-
-<Stack.Screen
-  name="CreateTask"
-  component={CreateTask}
-  options={{ title: 'Görev Oluştur' }}
-/>
-
-
+        <Stack.Screen
+          name="EditProject"
+          component={ProjectEditScreen}
+          options={{ title: 'Proje Düzenle' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

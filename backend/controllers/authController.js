@@ -73,3 +73,37 @@ exports.getProfile = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// Get all users
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find()
+            .select('name email') // Sadece name ve email bilgilerini döndür
+            .sort({ name: 1 }); // İsimlere göre alfabetik sırala
+        
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Search users
+exports.searchUsers = async (req, res) => {
+    try {
+        const searchQuery = req.query.search;
+        if (!searchQuery) {
+            return res.status(400).json({ message: 'Search query is required' });
+        }
+
+        const users = await User.find({
+            $or: [
+                { email: { $regex: searchQuery, $options: 'i' } },
+                { name: { $regex: searchQuery, $options: 'i' } }
+            ]
+        }).select('name email');
+
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

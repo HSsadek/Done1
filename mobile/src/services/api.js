@@ -1,7 +1,7 @@
 import axios from 'axios';
 import storage from '../utils/storage';
 
-const API_URL = 'http://10.192.189.100:5000/api';///önemli değiştirme 
+const API_URL = 'http://10.14.9.141:5000/api';///önemli değiştirme 
 
 
 const api = axios.create({
@@ -9,7 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 5000, // 5 saniye timeout (daha kısa süre)
+  timeout: 10000, // 10 saniye timeout
 });
 
 // Request interceptor - token eklemek için
@@ -96,7 +96,24 @@ export const authAPI = {
   },
   logout: async () => {
     await storage.clearAll();
-  }
+  },
+  getUsers: async () => {
+    try {
+      const response = await api.get('/auth/users');  // /users yerine /auth/users olarak değiştirildi
+      return response;
+    } catch (error) {
+      if (!error.response) {
+        // Network hatası veya timeout
+        throw new Error('Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.');
+      } else if (error.response.status === 401) {
+        // Yetkilendirme hatası
+        throw new Error('Bu işlem için yetkiniz yok. Lütfen tekrar giriş yapın.');
+      } else {
+        // Diğer API hataları
+        throw new Error(error.response?.data?.message || 'Kullanıcılar yüklenirken bir hata oluştu');
+      }
+    }
+  },
 };
 
 export const projectAPI = {

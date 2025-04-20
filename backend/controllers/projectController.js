@@ -1,4 +1,5 @@
 const Project = require('../models/Project');
+const User = require('../models/User'); // Added User model for team validation
 
 // Get all projects
 exports.getProjects = async (req, res) => {
@@ -17,13 +18,34 @@ exports.getProject = async (req, res) => {
     try {
         const project = await Project.findById(req.params.id)
             .populate('owner', 'name email')
-            .populate('team', 'name email');
+            .populate('team', 'name email')
+            .populate({
+                path: 'tasks',
+                populate: {
+                    path: 'assignedTo',
+                    select: 'name email'
+                }
+            });
         
         if (!project) {
             return res.status(404).json({ message: 'Project not found' });
         }
+
+        // Get task statistics
+        const taskStats = {
+            total: project.tasks.length,
+            completed: project.tasks.filter(task => task.status === 'Tamamlandı').length,
+            inProgress: project.tasks.filter(task => task.status === 'Devam Etmekte').length,
+            todo: project.tasks.filter(task => task.status === 'Yapılacak').length,
+            testing: project.tasks.filter(task => task.status === 'Test Edilecek').length
+        };
         
-        res.json(project);
+        const response = {
+            ...project.toJSON(),
+            taskStats
+        };
+        
+        res.json(response);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -34,13 +56,21 @@ exports.createProject = async (req, res) => {
     try {
         const { title, description, status, startDate, endDate, team } = req.body;
 
+        // Validate team members exist
+        if (team && team.length > 0) {
+            const teamMembers = await User.find({ _id: { $in: team } });
+            if (teamMembers.length !== team.length) {
+                return res.status(400).json({ message: 'One or more team members not found' });
+            }
+        }
+
         const project = await Project.create({
             title,
             description,
             status,
             startDate,
             endDate,
-            team,
+            team: team || [],
             owner: req.user._id
         });
 

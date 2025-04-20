@@ -1,62 +1,62 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { FAB, ActivityIndicator, Text } from 'react-native-paper';
+import { View, FlatList, ActivityIndicator, StyleSheet, RefreshControl, Alert } from 'react-native';
+import { FAB } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
+import ProjectCard from '../components/ProjectCard';
 import { projectAPI } from '../services/api';
 import { COLORS } from '../constants/theme';
-import ProjectCard from '../components/ProjectCard';
 
 const ProjectsScreen = ({ navigation }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
 
-  const loadProjects = async () => {
+  const fetchProjects = async () => {
     try {
-      setError('');
       const response = await projectAPI.getAllProjects();
-      setProjects(response.data);
-    } catch (err) {
-      console.error('Projeler yüklenirken hata:', err);
-      setError('Projeler yüklenirken bir hata oluştu');
+      // Projeleri tarihe göre sırala (en yeni en üstte)
+      const sortedProjects = response.data.sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+      setProjects(sortedProjects);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
+  const handleDelete = async (projectId) => {
+    try {
+      setLoading(true);
+      await projectAPI.deleteProject(projectId);
+      // Immediately refresh the list after deletion
+      fetchProjects();
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      Alert.alert('Hata', 'Proje silinirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchProjects();
+  }, []);
+
+  // Ekran odaklandığında projeleri güncelle
   useFocusEffect(
     useCallback(() => {
-      loadProjects();
+      fetchProjects();
     }, [])
   );
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadProjects();
-  };
-
-  const handleProjectPress = (project) => {
-    navigation.navigate('ProjectDetail', { projectId: project.id });
-  };
-
-  const handleAddProject = () => {
-    navigation.navigate('CreateProject');
-  };
-
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{error}</Text>
       </View>
     );
   }
@@ -65,33 +65,28 @@ const ProjectsScreen = ({ navigation }) => {
     <View style={styles.container}>
       <FlatList
         data={projects}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item._id.toString()}
         renderItem={({ item }) => (
           <ProjectCard
             project={item}
-            onPress={() => handleProjectPress(item)}
+            onPress={() => navigation.navigate('ProjectDetail', { projectId: item._id })}
+            onDelete={handleDelete}
           />
         )}
-        contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={handleRefresh}
+            onRefresh={onRefresh}
             colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
           />
         }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Henüz proje bulunmuyor</Text>
-            <Text style={styles.emptySubText}>Yeni bir proje eklemek için + butonuna dokunun</Text>
-          </View>
-        }
+        contentContainerStyle={styles.listContent}
       />
-      
       <FAB
         icon="plus"
         style={styles.fab}
-        onPress={handleAddProject}
+        onPress={() => navigation.navigate('CreateProject')}
         color={COLORS.white}
       />
     </View>
@@ -103,43 +98,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
   listContent: {
-    paddingVertical: 8,
-    flexGrow: 1,
+    padding: 16,
   },
-  emptyContainer: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 64,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: COLORS.gray,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    textAlign: 'center',
-  },
-  errorText: {
-    color: COLORS.danger,
-    textAlign: 'center',
-    marginHorizontal: 32,
   },
   fab: {
     position: 'absolute',
-    right: 16,
-    bottom: 16,
+    margin: 16,
+    right: 0,
+    bottom: 0,
     backgroundColor: COLORS.primary,
   },
 });

@@ -16,7 +16,7 @@
 					"if (!token || !tokenExpiry || new Date().getTime() > parseInt(tokenExpiry)) {",
 					"    // Login credentials",
 					"    const loginRequest = {",
-					"        url: 'http://localhost:5000/auth/login',",
+					"        url: '{{baseUrl}}/api/auth/login',",
 					"        method: 'POST',",
 					"        header: {",
 					"            'Content-Type': 'application/json'",
@@ -73,9 +73,9 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:5000/auth/login",
-							"host": ["http://localhost:5000"],
-							"path": ["auth", "login"]
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
 						}
 					}
 				},
@@ -94,9 +94,81 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/auth/register",
+							"raw": "{{baseUrl}}/api/auth/register",
 							"host": ["{{baseUrl}}"],
-							"path": ["auth", "register"]
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/profile",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Get All Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "users"]
+						}
+					}
+				},
+				{
+					"name": "Search Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/search?search=query",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "search"],
+							"query": [
+								{
+									"key": "search",
+									"value": "query"
+								}
+							]
 						}
 					}
 				}
@@ -121,9 +193,9 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/projects",
+							"raw": "{{baseUrl}}/api/projects",
 							"host": ["{{baseUrl}}"],
-							"path": ["projects"]
+							"path": ["api", "projects"]
 						}
 					}
 				},
@@ -144,7 +216,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"title\": \"Yeni Proje\",\n    \"description\": \"Proje açıklaması\",\n    \"status\": \"Not Started\",\n    \"startDate\": \"2025-04-06\",\n    \"endDate\": \"2025-05-06\",\n    \"team\": []\n}",
+							"raw": "{\n    \"title\": \"Yeni Proje\",\n    \"description\": \"Proje açıklaması\",\n    \"status\": \"Not Started\",\n    \"startDate\": \"2025-04-20\",\n    \"endDate\": \"2025-05-20\",\n    \"team\": []\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -152,9 +224,38 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/projects",
+							"raw": "{{baseUrl}}/api/projects",
 							"host": ["{{baseUrl}}"],
-							"path": ["projects"]
+							"path": ["api", "projects"]
+						}
+					}
+				},
+				{
+					"name": "Get Single Project",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/projects/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "projects", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Project ID"
+								}
+							]
 						}
 					}
 				},
@@ -175,7 +276,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"title\": \"Güncellenmiş Proje Başlığı\",\n    \"description\": \"Güncellenmiş proje açıklaması\",\n    \"status\": \"In Progress\",\n    \"startDate\": \"2025-04-06\",\n    \"endDate\": \"2025-05-06\",\n    \"team\": []\n}",
+							"raw": "{\n    \"title\": \"Güncellenmiş Proje\",\n    \"description\": \"Güncellenmiş açıklama\",\n    \"status\": \"In Progress\",\n    \"startDate\": \"2025-04-20\",\n    \"endDate\": \"2025-05-20\",\n    \"team\": []\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -183,14 +284,14 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/projects/:id",
+							"raw": "{{baseUrl}}/api/projects/:id",
 							"host": ["{{baseUrl}}"],
-							"path": ["projects", ":id"],
+							"path": ["api", "projects", ":id"],
 							"variable": [
 								{
 									"key": "id",
 									"value": "",
-									"description": "Güncellenecek projenin ID'si"
+									"description": "Project ID"
 								}
 							]
 						}
@@ -212,43 +313,14 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/projects/:id",
+							"raw": "{{baseUrl}}/api/projects/:id",
 							"host": ["{{baseUrl}}"],
-							"path": ["projects", ":id"],
+							"path": ["api", "projects", ":id"],
 							"variable": [
 								{
 									"key": "id",
 									"value": "",
-									"description": "Silinecek projenin ID'si"
-								}
-							]
-						}
-					}
-				},
-				{
-					"name": "Get Single Project",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/projects/:id",
-							"host": ["{{baseUrl}}"],
-							"path": ["projects", ":id"],
-							"variable": [
-								{
-									"key": "id",
-									"value": "",
-									"description": "Görüntülenecek projenin ID'si"
+									"description": "Project ID"
 								}
 							]
 						}
@@ -275,14 +347,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/projects/:projectId/tasks",
+							"raw": "{{baseUrl}}/api/projects/:projectId/tasks",
 							"host": ["{{baseUrl}}"],
-							"path": ["projects", ":projectId", "tasks"],
+							"path": ["api", "projects", ":projectId", "tasks"],
 							"variable": [
 								{
 									"key": "projectId",
 									"value": "",
-									"description": "Görevleri listelenecek projenin ID'si"
+									"description": "Project ID"
 								}
 							]
 						}
@@ -313,14 +385,125 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/projects/:projectId/tasks",
+							"raw": "{{baseUrl}}/api/projects/:projectId/tasks",
 							"host": ["{{baseUrl}}"],
-							"path": ["projects", ":projectId", "tasks"],
+							"path": ["api", "projects", ":projectId", "tasks"],
 							"variable": [
 								{
 									"key": "projectId",
 									"value": "",
-									"description": "Göreve eklenecek projenin ID'si"
+									"description": "Project ID"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Single Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/projects/:projectId/tasks/:taskId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "projects", ":projectId", "tasks", ":taskId"],
+							"variable": [
+								{
+									"key": "projectId",
+									"value": "",
+									"description": "Project ID"
+								},
+								{
+									"key": "taskId",
+									"value": "",
+									"description": "Task ID"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Güncellenmiş Görev\",\n    \"description\": \"Güncellenmiş görev açıklaması\",\n    \"status\": \"Devam Etmekte\",\n    \"assignedTo\": \"user_id\",\n    \"dueDate\": \"2025-05-01\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/projects/:projectId/tasks/:taskId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "projects", ":projectId", "tasks", ":taskId"],
+							"variable": [
+								{
+									"key": "projectId",
+									"value": "",
+									"description": "Project ID"
+								},
+								{
+									"key": "taskId",
+									"value": "",
+									"description": "Task ID"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/projects/:projectId/tasks/:taskId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "projects", ":projectId", "tasks", ":taskId"],
+							"variable": [
+								{
+									"key": "projectId",
+									"value": "",
+									"description": "Project ID"
+								},
+								{
+									"key": "taskId",
+									"value": "",
+									"description": "Task ID"
 								}
 							]
 						}
