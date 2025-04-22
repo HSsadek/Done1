@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/project-management', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/project-management', {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })

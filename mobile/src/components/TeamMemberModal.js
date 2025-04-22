@@ -75,7 +75,7 @@ const TeamMemberModal = ({ visible, onClose, onSubmit, currentMembers = [] }) =>
           />
 
           {loading ? (
-            <ActivityIndicator size="large" color={COLORS.primary} style={styles.loading} />
+            <ActivityIndicator size={40} color={COLORS.primary} style={styles.loading} />
           ) : error ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>

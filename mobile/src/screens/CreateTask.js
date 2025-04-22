@@ -67,7 +67,7 @@ const CreateTask = ({ route, navigation }) => {
 
       {/* Yükleniyor durumu */}
       {loading ? (
-        <ActivityIndicator animating={true} size="large" style={styles.loading} />
+        <ActivityIndicator animating={true} size={40} style={styles.loading} />
       ) : (
         <Button
           mode="contained"

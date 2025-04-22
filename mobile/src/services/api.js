@@ -1,7 +1,7 @@
 import axios from 'axios';
 import storage from '../utils/storage';
 
-const API_URL = 'http://10.14.9.141:5000/api';///önemli değiştirme 
+const API_URL = 'http://10.14.9.169:5000/api';///önemli değiştirme 
 
 
 const api = axios.create({

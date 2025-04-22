@@ -46,7 +46,7 @@ const ProjectEditScreen = ({ route, navigation }) => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size={40} color={COLORS.primary} />
       </View>
     );
   }
