@@ -9,6 +9,7 @@ import { COLORS } from '../constants/theme';
 import { authAPI } from '../services/api';
 
 const ProfileScreen = ({ navigation }) => {
+  const [showImageModal, setShowImageModal] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -147,11 +148,13 @@ const ProfileScreen = ({ navigation }) => {
           <Surface style={styles.profileCard}>
             <View style={styles.avatarModernContainer}>
               <View style={styles.avatarShadow}>
-                {image ? (
-                  <Image source={{ uri: image }} style={styles.avatarModern} />
-                ) : (
-                  <Avatar.Icon size={120} icon="account" color={COLORS.white} style={{ backgroundColor: COLORS.primary, ...styles.avatarModern }} />
-                )}
+                <TouchableOpacity onPress={() => setShowImageModal(true)} activeOpacity={0.8}>
+                  {image ? (
+                    <Image source={{ uri: image }} style={styles.avatarModern} />
+                  ) : (
+                    <Avatar.Icon size={120} icon="account" color={COLORS.white} style={{ backgroundColor: COLORS.primary, ...styles.avatarModern }} />
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
             <View style={styles.infoModernSection}>
@@ -179,6 +182,16 @@ const ProfileScreen = ({ navigation }) => {
         </View>
       </ScrollView>
     </LinearGradient>
+    <Portal>
+      <Modal visible={showImageModal} onDismiss={() => setShowImageModal(false)} contentContainerStyle={{ justifyContent: 'center', alignItems: 'center', flex: 1, backgroundColor: 'rgba(0,0,0,0.85)' }}>
+        <View style={{ alignItems: 'center' }}>
+          {image && (
+            <Image source={{ uri: image }} style={{ width: 300, height: 300, borderRadius: 12, marginBottom: 24 }} resizeMode="contain" />
+          )}
+          <Button mode="contained" onPress={() => setShowImageModal(false)} style={{ marginTop: 12 }}>Kapat</Button>
+        </View>
+      </Modal>
+    </Portal>
     <Portal>
       <Modal
         visible={editModalVisible}

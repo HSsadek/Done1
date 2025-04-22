@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { Image } from 'react-native';
 import { View, FlatList, ActivityIndicator, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { FAB } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,6 +10,8 @@ import { COLORS } from '../constants/theme';
 import { IconButton } from 'react-native-paper';
 
 const ProjectsScreen = ({ navigation }) => {
+  const [user, setUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,20 +51,37 @@ const ProjectsScreen = ({ navigation }) => {
     fetchProjects();
   }, []);
 
-  // Ekran odaklandığında projeleri güncelle
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        setUserLoading(true);
+        const response = await require('../services/api').authAPI.getProfile();
+        setUser(response.data);
+      } catch (err) {
+        setUser(null);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
+
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <IconButton
-          icon="account-circle"
-          color={COLORS.white}
-          size={28}
+          icon={() => (
+            user && user.profileImage && user.profileImage.trim() !== '' ?
+              <Image source={{ uri: user.profileImage }} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary }} />
+              :
+              <IconButton icon="account-circle" color={COLORS.white} size={28} style={{ margin: 0, padding: 0 }} />
+          )}
           onPress={() => navigation.navigate('Profile')}
-          style={{ marginRight: 8 }}
+          style={{ marginRight: 8, marginLeft: 0, padding: 0 }}
         />
       ),
     });
-  }, [navigation]);
+  }, [navigation, user]);
 
   useFocusEffect(
     useCallback(() => {
