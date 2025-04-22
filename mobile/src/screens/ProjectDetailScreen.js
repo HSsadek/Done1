@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, RefreshControl, Alert, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Surface, Text, Button, Chip, List, ActivityIndicator } from 'react-native-paper';
+import { Surface, Text, Button, Chip, ActivityIndicator, List } from 'react-native-paper';
+import DraggableFlatList from 'react-native-draggable-flatlist';
 import { projectAPI, taskAPI } from '../services/api';
 import { COLORS } from '../constants/theme';
 import { TASK_STATUS_COLORS } from '../constants/taskStatus';
@@ -10,6 +11,12 @@ const ProjectDetailScreen = ({ route, navigation }) => {
   const { projectId } = route.params;
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [boardTasks, setBoardTasks] = useState({
+    TODO: [],
+    IN_PROGRESS: [],
+    DONE: [],
+    TO_TEST: []
+  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -25,9 +32,15 @@ const ProjectDetailScreen = ({ route, navigation }) => {
       ]);
 
       if (projectResponse.data && tasksResponse.data) {
-        console.log('Proje Detayı:', projectResponse.data); // Debug log
         setProject(projectResponse.data);
         setTasks(tasksResponse.data);
+        // Görevleri durumlarına göre ayır
+        setBoardTasks({
+          TODO: tasksResponse.data.filter(t => t.status === 'TODO'),
+          IN_PROGRESS: tasksResponse.data.filter(t => t.status === 'IN_PROGRESS'),
+          DONE: tasksResponse.data.filter(t => t.status === 'DONE'),
+          TO_TEST: tasksResponse.data.filter(t => t.status === 'TO_TEST'),
+        });
       } else {
         throw new Error('Veri boş');
       }
@@ -119,6 +132,31 @@ const ProjectDetailScreen = ({ route, navigation }) => {
       </View>
     );
   }
+
+  const statusLabels = {
+    TODO: 'Yapılacak',
+    IN_PROGRESS: 'Devam Ediyor',
+    TO_TEST: 'Test Edilecek',
+    DONE: 'Tamamlanan'
+  };
+
+  const handleMoveTask = async (task, currentStatus) => {
+    // Sıradaki statüye geçir (örnek: TODO -> IN_PROGRESS -> TO_TEST -> DONE)
+    const statusOrder = ['TODO', 'IN_PROGRESS', 'TO_TEST', 'DONE'];
+    const nextIndex = (statusOrder.indexOf(currentStatus) + 1) % statusOrder.length;
+    const newStatus = statusOrder[nextIndex];
+    try {
+      await taskAPI.updateTaskStatus(task._id, newStatus);
+      loadProjectData();
+    } catch (e) {
+      Alert.alert('Hata', 'Görev durumu güncellenemedi');
+    }
+  };
+
+  const handleReorder = (status, newData) => {
+    setBoardTasks(prev => ({ ...prev, [status]: newData }));
+    // Burada sıralama backend'e gönderilmiyorsa sadece localde değişir.
+  };
 
   return (
     <View style={{ flex: 1 }}>

@@ -6,7 +6,7 @@ import * as Yup from 'yup';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import TaskModal from '../components/TaskModal';
 import TeamMemberModal from '../components/TeamMemberModal';
-import { projectAPI } from '../services/api';
+import { projectAPI, taskAPI } from '../services/api';
 import { COLORS } from '../constants/theme';
 
 const validationSchema = Yup.object().shape({
@@ -62,7 +62,28 @@ const CreateProjectScreen = ({ navigation }) => {
     try {
       setLoading(true);
       setError('');
-      await projectAPI.createProject(values);
+      // teamMembers'ı backend'in beklediği şekilde team arrayine dönüştür
+      const projectPayload = {
+        title: values.title,
+        description: values.description,
+        startDate: values.startDate,
+        endDate: values.endDate,
+        team: values.teamMembers.map((m) => m.id),
+        status: 'Not Started', // veya başka bir varsayılan durum
+      };
+      // Önce projeyi oluştur
+      const response = await projectAPI.createProject(projectPayload);
+      const projectId = response.data._id;
+      // Görevleri backend'e ayrı ayrı ekle
+      for (const task of values.tasks) {
+        await taskAPI.createTask(projectId, {
+          title: task.title,
+          description: task.description,
+          assignedTo: task.assignedTo,
+          startDate: task.startDate,
+          endDate: task.endDate,
+        });
+      }
       navigation.goBack();
     } catch (err) {
       console.error('Proje oluşturulurken hata:', err);
@@ -71,6 +92,7 @@ const CreateProjectScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
+
 
   const formatDate = useCallback((date) => {
     if (!date) return '';

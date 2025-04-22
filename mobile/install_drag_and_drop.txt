@@ -1,0 +1,5 @@
+Expo Go ile uyumlu görev durumu sürükle-bırak için aşağıdaki paketi yükle:
+
+npm install react-native-draggable-flatlist
+
+Bu paket saf JS olduğu için Expo Go ile sorunsuz çalışır. Yükleme sonrası ProjectDetailScreen.js dosyasında görevleri sürükle-bırak ile yönetebilirsin.

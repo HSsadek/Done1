@@ -6,7 +6,8 @@ exports.getProjects = async (req, res) => {
     try {
         const projects = await Project.find()
             .populate('owner', 'name email')
-            .populate('team', 'name email');
+            .populate('team', 'name email')
+            .populate({ path: 'tasks' }); // Görevleri de getir
         res.json(projects);
     } catch (error) {
         res.status(500).json({ message: error.message });

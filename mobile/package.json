@@ -22,6 +22,7 @@
     "formik": "^2.4.6",
     "react": "18.3.0",
     "react-native": "0.76.0",
+    "react-native-draggable-flatlist": "^4.0.2",
     "react-native-gesture-handler": "^2.25.0",
     "react-native-modal-datetime-picker": "^18.0.0",
     "react-native-paper": "5.13.0",
