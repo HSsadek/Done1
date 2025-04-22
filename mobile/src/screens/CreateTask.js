@@ -16,7 +16,7 @@ const CreateTask = ({ route, navigation }) => {
     setLoading(true); // Görev oluşturma işlemi başlarken yükleniyor
     try {
       // Görev oluşturma işlemi
-      await taskAPI.createTask(projectId, { title, description, dueDate });
+      await taskAPI.createTask(projectId, { title, description, dueDate, status: 'Yapılacak' });
       // Proje Detayı ekranına geri dön ve yenileme sinyali gönder
       navigation.navigate('ProjectDetail', { refresh: true });
     } catch (err) {

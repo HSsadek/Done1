@@ -141,7 +141,7 @@ export const taskAPI = {
   unassignTask: (taskId) => api.put(`/tasks/${taskId}/unassign`),
   
   // Görev durumu
-  updateTaskStatus: (taskId, status) => api.put(`/tasks/${taskId}/status`, { status }),
+  updateTaskStatus: (projectId, taskId, status) => api.put(`/projects/${projectId}/tasks/${taskId}`, { status }),
 };
 
 export default api;

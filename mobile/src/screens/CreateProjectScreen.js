@@ -82,6 +82,7 @@ const CreateProjectScreen = ({ navigation }) => {
           assignedTo: task.assignedTo,
           startDate: task.startDate,
           endDate: task.endDate,
+          status: 'Yapılacak',
         });
       }
       navigation.goBack();

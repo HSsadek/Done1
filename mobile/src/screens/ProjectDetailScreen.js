@@ -36,10 +36,10 @@ const ProjectDetailScreen = ({ route, navigation }) => {
         setTasks(tasksResponse.data);
         // Görevleri durumlarına göre ayır
         setBoardTasks({
-          TODO: tasksResponse.data.filter(t => t.status === 'TODO'),
-          IN_PROGRESS: tasksResponse.data.filter(t => t.status === 'IN_PROGRESS'),
-          DONE: tasksResponse.data.filter(t => t.status === 'DONE'),
-          TO_TEST: tasksResponse.data.filter(t => t.status === 'TO_TEST'),
+          TODO: tasksResponse.data.filter(t => t.status === 'Yapılacak'),
+          IN_PROGRESS: tasksResponse.data.filter(t => t.status === 'Devam Etmekte'),
+          DONE: tasksResponse.data.filter(t => t.status === 'Tamamlandı'),
+          TO_TEST: tasksResponse.data.filter(t => t.status === 'Test Edilecek'),
         });
       } else {
         throw new Error('Veri boş');
@@ -135,18 +135,22 @@ const ProjectDetailScreen = ({ route, navigation }) => {
 
   const statusLabels = {
     TODO: 'Yapılacak',
-    IN_PROGRESS: 'Devam Ediyor',
+    IN_PROGRESS: 'Devam Etmekte',
     TO_TEST: 'Test Edilecek',
-    DONE: 'Tamamlanan'
+    DONE: 'Tamamlandı',
+    'Yapılacak': 'Yapılacak',
+    'Devam Etmekte': 'Devam Etmekte',
+    'Test Edilecek': 'Test Edilecek',
+    'Tamamlandı': 'Tamamlandı'
   };
 
   const handleMoveTask = async (task, currentStatus) => {
     // Sıradaki statüye geçir (örnek: TODO -> IN_PROGRESS -> TO_TEST -> DONE)
-    const statusOrder = ['TODO', 'IN_PROGRESS', 'TO_TEST', 'DONE'];
+    const statusOrder = ['Yapılacak', 'Devam Etmekte', 'Test Edilecek', 'Tamamlandı'];
     const nextIndex = (statusOrder.indexOf(currentStatus) + 1) % statusOrder.length;
     const newStatus = statusOrder[nextIndex];
     try {
-      await taskAPI.updateTaskStatus(task._id, newStatus);
+      await taskAPI.updateTaskStatus(project._id, task._id, newStatus);
       loadProjectData();
     } catch (e) {
       Alert.alert('Hata', 'Görev durumu güncellenemedi');
@@ -158,13 +162,22 @@ const ProjectDetailScreen = ({ route, navigation }) => {
     // Burada sıralama backend'e gönderilmiyorsa sadece localde değişir.
   };
 
+  const handleAdvanceStatus = (task) => {
+    const statusOrder = ['Yapılacak', 'Devam Etmekte', 'Test Edilecek', 'Tamamlandı'];
+    const currentIndex = statusOrder.indexOf(task.status);
+    if (currentIndex === -1 || currentIndex === statusOrder.length - 1) return; // Tamamlandı ise ilerlemesin
+    const nextStatus = statusOrder[currentIndex + 1];
+    taskAPI.updateTaskStatus(project._id, task._id, nextStatus)
+      .then(() => loadProjectData())
+      .catch(() => alert('Durum güncellenemedi!'))
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView 
         style={styles.container}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
             onRefresh={loadProjectData}
             colors={[COLORS.primary]}
           />
@@ -179,14 +192,12 @@ const ProjectDetailScreen = ({ route, navigation }) => {
             {project.status}
           </Chip>
           <Text style={styles.description}>{project.description}</Text>
-          
           <View style={styles.ownerSection}>
             <Text style={styles.sectionLabel}>Proje Sahibi:</Text>
             <Text style={styles.ownerText}>
               {project.owner?.name} ({project.owner?.email})
             </Text>
           </View>
-          
           <View style={styles.dateSection}>
             <Text style={styles.dateText}>
               Başlangıç: {new Date(project.startDate).toLocaleDateString('tr-TR')}
@@ -205,28 +216,16 @@ const ProjectDetailScreen = ({ route, navigation }) => {
               <Text style={styles.statLabel}>Toplam</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: TASK_STATUS_COLORS['DONE'] }]}>
-                {project.taskStats?.completed || 0}
-              </Text>
+              <Text style={[styles.statNumber, { color: TASK_STATUS_COLORS['DONE'] }]}>{project.taskStats?.completed || 0}</Text>
               <Text style={styles.statLabel}>Tamamlanan</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: TASK_STATUS_COLORS['IN_PROGRESS'] }]}>
-                {project.taskStats?.inProgress || 0}
-              </Text>
+              <Text style={[styles.statNumber, { color: TASK_STATUS_COLORS['IN_PROGRESS'] }]}>{project.taskStats?.inProgress || 0}</Text>
               <Text style={styles.statLabel}>Devam Eden</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: TASK_STATUS_COLORS['TODO'] }]}>
-                {project.taskStats?.todo || 0}
-              </Text>
+              <Text style={[styles.statNumber, { color: TASK_STATUS_COLORS['TODO'] }]}>{project.taskStats?.todo || 0}</Text>
               <Text style={styles.statLabel}>Yapılacak</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: TASK_STATUS_COLORS['TO_TEST'] }]}>
-                {project.taskStats?.toTest || 0}
-              </Text>
-              <Text style={styles.statLabel}>Test Edilecek</Text>
             </View>
           </View>
         </Surface>
@@ -252,59 +251,52 @@ const ProjectDetailScreen = ({ route, navigation }) => {
         </Surface>
 
         <Surface style={styles.section}>
-          <List.Section>
-            <List.Subheader>Görevler ({tasks.length})</List.Subheader>
-            {tasks.map((task) => (
-              <List.Item
-                key={task._id}
-                title={task.title}
-                description={
-                  <View style={styles.taskDescription}>
-                    <Text style={styles.taskDescText}>{task.description}</Text>
-                    {task.assignedTo && (
-                      <Text style={styles.taskAssignee}>
-                        Atanan: {project.team?.find(m => m._id === task.assignedTo)?.name || 'Bilinmiyor'}
-                      </Text>
-                    )}
-                    <Text style={styles.taskDate}>
-                      {new Date(task.startDate).toLocaleDateString('tr-TR')} - {new Date(task.endDate).toLocaleDateString('tr-TR')}
-                    </Text>
-                  </View>
-                }
-                left={props => (
-                  <List.Icon {...props} 
-                    icon={task.status === 'DONE' ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"}
-                    color={TASK_STATUS_COLORS[task.status] || COLORS.gray}
-                  />
+          <View style={{paddingBottom: 16}}>
+            {['TODO', 'IN_PROGRESS', 'TO_TEST', 'DONE'].map((status) => (
+              <View key={status} style={{ width: windowWidth * 0.8, marginHorizontal: 8, marginBottom: 24 }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8, color: TASK_STATUS_COLORS[status] || COLORS.primary }}>
+                  {statusLabels[status]}
+                </Text>
+                {boardTasks[status] && boardTasks[status].length > 0 ? (
+                  boardTasks[status].map(item => (
+                    <Surface key={item._id} style={{ marginBottom: 12, borderRadius: 8, elevation: 2, backgroundColor: COLORS.white }}>
+                      <View style={{ padding: 12 }}>
+                        <Text style={{ fontWeight: 'bold', fontSize: 15 }}>{item.title}</Text>
+                        <Text style={{ color: COLORS.textLight, fontSize: 13, marginVertical: 2 }}>{item.description}</Text>
+                        <Text style={{ color: COLORS.gray, fontSize: 12 }}>Atanan: {item.assignedTo?.name || 'Bilinmiyor'}</Text>
+                        <Text style={{ color: COLORS.gray, fontSize: 12 }}>
+                          Tarih: {item.startDate ? new Date(item.startDate).toLocaleDateString('tr-TR') : '-'} - {item.endDate ? new Date(item.endDate).toLocaleDateString('tr-TR') : '-'}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                          <Chip
+                            mode="flat"
+                            style={[styles.taskStatusChip, { backgroundColor: TASK_STATUS_COLORS[item.status] || COLORS.primary }]}
+                          >
+                            {item.status}
+                          </Chip>
+                          <Button compact onPress={() => handleAdvanceStatus(item)} style={{ marginLeft: 8 }}>
+                            Durumu İlerle
+                          </Button>
+                        </View>
+                      </View>
+                    </Surface>
+                  ))
+                ) : (
+                  <Text style={{ color: COLORS.gray, fontStyle: 'italic' }}>Görev yok</Text>
                 )}
-                right={props => (
-                  <Chip 
-                    mode="flat" 
-                    style={[styles.taskStatusChip, { backgroundColor: TASK_STATUS_COLORS[task.status] || COLORS.primary }]}
-                  >
-                    {task.status}
-                  </Chip>
-                )}
-              />
+              </View>
             ))}
-          </List.Section>
+          </View>
         </Surface>
+
       </ScrollView>
     </View>
   );
-};
+}
+
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
