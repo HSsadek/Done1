@@ -6,6 +6,8 @@ import ProjectCard from '../components/ProjectCard';
 import { projectAPI } from '../services/api';
 import { COLORS } from '../constants/theme';
 
+import { IconButton } from 'react-native-paper';
+
 const ProjectsScreen = ({ navigation }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,20 @@ const ProjectsScreen = ({ navigation }) => {
   }, []);
 
   // Ekran odaklandığında projeleri güncelle
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <IconButton
+          icon="account-circle"
+          color={COLORS.white}
+          size={28}
+          onPress={() => navigation.navigate('Profile')}
+          style={{ marginRight: 8 }}
+        />
+      ),
+    });
+  }, [navigation]);
+
   useFocusEffect(
     useCallback(() => {
       fetchProjects();

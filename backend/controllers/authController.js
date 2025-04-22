@@ -66,12 +66,29 @@ exports.login = async (req, res) => {
 
 // Get user profile
 exports.getProfile = async (req, res) => {
-    try {
-        const user = await User.findById(req.user._id).select('-password');
-        res.json(user);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    console.log('Profil getirildi:', user);
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Update user profile
+exports.updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    // Update name and profileImage if provided
+    if (req.body.name) user.name = req.body.name;
+    if (req.body.profileImage) user.profileImage = req.body.profileImage;
+    await user.save();
+    console.log('Profil güncellendi:', user);
+    res.json({ message: 'Profil güncellendi', user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Get all users

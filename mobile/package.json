@@ -17,6 +17,7 @@
     "axios": "^1.8.4",
     "color": "^5.0.0",
     "expo": "~52.0.46",
+    "expo-image-picker": "^16.0.6",
     "expo-linear-gradient": "~14.0.2",
     "expo-status-bar": "~2.0.1",
     "formik": "^2.4.6",

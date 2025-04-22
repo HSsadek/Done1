@@ -9,6 +9,7 @@ import ProjectsScreen from '../screens/ProjectsScreen';
 import ProjectDetailScreen from '../screens/ProjectDetailScreen';
 import CreateProjectScreen from '../screens/CreateProjectScreen';
 import ProjectEditScreen from '../screens/ProjectEditScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -37,6 +38,14 @@ const AppNavigator = () => {
           component={ProjectsScreen}
           options={{
             title: 'Projelerim',
+          }}
+        />
+
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{
+            title: 'Profilim',
           }}
         />
         

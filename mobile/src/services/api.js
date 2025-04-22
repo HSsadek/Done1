@@ -66,6 +66,18 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
+  // Profil güncelleme
+  updateProfile: async (profileData) => {
+    try {
+      // Varsayılan endpoint: /auth/profile (PUT)
+      const response = await api.put('/auth/profile', profileData);
+      // İsterseniz endpoint'i burada kolayca değiştirebilirsiniz
+      return response;
+    } catch (error) {
+      console.error('Profil güncelleme hatası:', error);
+      throw error;
+    }
+  },
   login: async (credentials) => {
     try {
       const response = await api.post('/auth/login', credentials);
