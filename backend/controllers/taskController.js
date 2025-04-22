@@ -51,6 +51,12 @@ exports.createTask = async (req, res) => {
             project: req.params.projectId
         });
 
+        // Eğer atanan kullanıcı team'de yoksa, ekle
+        if (!project.team.map(id => id.toString()).includes(assignedTo.toString()) && project.owner.toString() !== assignedTo.toString()) {
+            project.team.push(assignedTo);
+            await project.save();
+        }
+
         const populatedTask = await Task.findById(task._id)
             .populate('assignedTo', 'name email')
             .populate('project', 'title');

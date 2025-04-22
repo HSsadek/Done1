@@ -9,6 +9,32 @@ import { COLORS } from '../constants/theme';
 import { authAPI } from '../services/api';
 
 const ProfileScreen = ({ navigation }) => {
+  // Çıkış (logout) fonksiyonu
+  const handleLogout = async () => {
+    try {
+      // Tüm local storage temizle
+      const { clearAll } = require('../utils/storage').storage;
+      await clearAll();
+      // API belleğindeki token'ı sıfırla
+      if (typeof require('../services/api').setMemoryToken === 'function') {
+        require('../services/api').setMemoryToken(null);
+      }
+      // API logout fonksiyonu çağrılabiliyorsa çağır
+      await authAPI.logout && authAPI.logout();
+      // Kendi state'lerini de sıfırla (user, token vs.)
+      setUser(null);
+      setImage(null);
+      // Navigation stack'i sıfırla ve Login ekranına yönlendir
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+      // Konsola bilgi bırak
+      console.log('Kullanıcı çıkış yaptı ve uygulama sıfırlandı');
+    } catch (err) {
+      console.log('Çıkış sırasında hata:', err);
+    }
+  };
   const [showImageModal, setShowImageModal] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -173,10 +199,7 @@ const ProfileScreen = ({ navigation }) => {
               </View>
             </View>
           </Surface>
-          <Button mode="contained" style={styles.logoutModernButton} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} onPress={async () => {
-            await authAPI.logout();
-            navigation.replace('Login');
-          }}>
+          <Button mode="contained" style={styles.logoutModernButton} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} onPress={handleLogout}>
             <IconButton icon="logout" size={20} color={COLORS.white} style={{ margin: 0, padding: 0 }} disabled /> Çıkış Yap
           </Button>
         </View>

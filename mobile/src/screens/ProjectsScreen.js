@@ -19,8 +19,24 @@ const ProjectsScreen = ({ navigation }) => {
   const fetchProjects = async () => {
     try {
       const response = await projectAPI.getAllProjects();
+      // Sadece kullanıcının sahibi olduğu veya ekip üyesi olduğu projeleri filtrele
+      const filtered = response.data.filter(project => {
+        if (!user || !user._id) return false;
+        // Sahibi mi? (owner nesne veya string olabilir)
+        if (project.owner && (project.owner === user._id || project.owner._id === user._id)) return true;
+        // Ekip üyesi mi? (team dizisi string veya nesne olabilir)
+        if (Array.isArray(project.team)) {
+          // team dizisi string id veya nesne olabilir
+          return project.team.some(member => {
+            if (typeof member === 'string') return member === user._id;
+            if (member && member._id) return member._id === user._id;
+            return false;
+          });
+        }
+        return false;
+      });
       // Projeleri tarihe göre sırala (en yeni en üstte)
-      const sortedProjects = response.data.sort((a, b) => {
+      const sortedProjects = filtered.sort((a, b) => {
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
       setProjects(sortedProjects);
@@ -85,8 +101,10 @@ const ProjectsScreen = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      fetchProjects();
-    }, [])
+      if (user && user._id) {
+        fetchProjects();
+      }
+    }, [user])
   );
 
   if (loading) {
