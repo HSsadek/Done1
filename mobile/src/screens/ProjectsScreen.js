@@ -19,6 +19,9 @@ const ProjectsScreen = ({ navigation }) => {
   const fetchProjects = async () => {
     try {
       const response = await projectAPI.getAllProjects();
+      console.log('Projeler API response:', response.data);
+      console.log('Projeler API response status:', response.status);
+      console.log('Projeler API response headers:', response.headers);
       // Sadece kullanıcının sahibi olduğu veya ekip üyesi olduğu projeleri filtrele
       const filtered = response.data.filter(project => {
         if (!user || !user._id) return false;
@@ -40,6 +43,7 @@ const ProjectsScreen = ({ navigation }) => {
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
       setProjects(sortedProjects);
+      console.log('Filtrelenmiş ve sıralanmış projeler:', sortedProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
     } finally {
@@ -72,15 +76,44 @@ const ProjectsScreen = ({ navigation }) => {
       try {
         setUserLoading(true);
         const response = await require('../services/api').authAPI.getProfile();
+        console.log('Kullanıcı profili API response:', response.data);
         setUser(response.data);
       } catch (err) {
         setUser(null);
+        console.error('Kullanıcı profili alınamadı, hata:', err);
+        // Hata durumunda storage temizle ve Login ekranına yönlendir
+        const { clearAll } = require('../utils/storage').storage;
+        await clearAll();
+        if (navigation && navigation.reset) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        }
       } finally {
         setUserLoading(false);
       }
     };
     fetchUser();
   }, []);
+
+  // Eğer user null ise storage'dan tekrar çek
+  React.useEffect(() => {
+    if (!user) {
+      (async () => {
+        try {
+          const { getItem } = require('../utils/storage').storage;
+          const userStr = await getItem('user');
+          if (userStr) {
+            const userObj = JSON.parse(userStr);
+            setUser(userObj);
+          }
+        } catch (e) {
+          // ignore
+        }
+      })();
+    }
+  }, [user]);
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
