@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, Modal, TextInput, ScrollView, FlatList } from 'react-native';
-import { Text, Button, ActivityIndicator, Avatar, IconButton, Surface } from 'react-native-paper';
+import { View, StyleSheet, Image, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { Text, Button, ActivityIndicator, Avatar, IconButton, Surface, TextInput, Portal, Modal } from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { COLORS } from '../constants/theme';
 
 import { authAPI } from '../services/api';
-import FollowedUserCard from '../components/FollowedUserCard';
 
 const ProfileScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -16,6 +16,7 @@ const ProfileScreen = ({ navigation }) => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editName, setEditName] = useState('');
   const [editImage, setEditImage] = useState(null);
+  const [editRole, setEditRole] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [followedUsers, setFollowedUsers] = useState([]);
   const [loadingFollowed, setLoadingFollowed] = useState(false);
@@ -79,10 +80,13 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const openEditModal = () => {
-    setEditName(user?.name || '');
+    if (!user) return; // Kullanıcı verisi yoksa modalı açma
+    setEditName(user.name || '');
     setEditImage(image);
+    setEditRole(user.role || '');
     setEditModalVisible(true);
   };
+
 
   const saveProfileEdit = async () => {
     setSavingEdit(true);
@@ -94,9 +98,9 @@ const ProfileScreen = ({ navigation }) => {
         profileImageToSend = `data:image/jpeg;base64,${base64}`;
       }
       // Backend'e profil güncelleme isteği gönder
-      const payload = { name: editName, profileImage: profileImageToSend };
+      const payload = { name: editName, profileImage: profileImageToSend, role: editRole };
       await authAPI.updateProfile(payload);
-      setUser(prev => ({ ...prev, name: editName, profileImage: profileImageToSend }));
+      setUser(prev => ({ ...prev, name: editName, profileImage: profileImageToSend, role: editRole }));
       setImage(profileImageToSend);
 
       setEditModalVisible(false);
@@ -131,99 +135,230 @@ const ProfileScreen = ({ navigation }) => {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: COLORS.background }} contentContainerStyle={styles.scrollContent}>
-      <View style={styles.container}>
-        <TouchableOpacity onPress={() => pickImage(setImage)} style={styles.avatarContainer}>
-          {image ? (
-            <Image source={{ uri: image }} style={styles.avatar} />
-          ) : (
-            <Avatar.Icon size={100} icon="account" color={COLORS.white} style={{ backgroundColor: COLORS.primary }} />
-          )}
-          <Text style={styles.changePhotoText}>Profil Fotoğrafı Değiştir</Text>
-        </TouchableOpacity>
-        <Surface style={styles.infoContainer}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={styles.label}>Ad Soyad</Text>
-            <IconButton icon="pencil" size={20} onPress={openEditModal} />
-          </View>
-          <Text style={styles.value}>{user?.name || '-'}</Text>
-          <Text style={styles.label}>E-posta</Text>
-          <Text style={styles.value}>{user?.email || '-'}</Text>
-          <Text style={styles.label}>Rol</Text>
-          <Text style={styles.value}>{user?.role || '-'}</Text>
-        </Surface>
-
-        {/* Followed Users Section */}
-        <Surface style={styles.followedContainer}>
-          <Text style={styles.sectionTitle}>Takip Ettiklerim</Text>
-          {loadingFollowed ? (
-            <ActivityIndicator size={28} color={COLORS.primary} style={{ marginVertical: 12 }} />
-          ) : errorFollowed ? (
-            <Text style={styles.errorText}>{errorFollowed}</Text>
-          ) : followedUsers.length === 0 ? (
-            <Text style={styles.emptyText}>Henüz kimseyi takip etmiyorsunuz.</Text>
-          ) : (
-            <FlatList
-              data={followedUsers}
-              keyExtractor={item => item._id}
-              renderItem={({ item }) => (
-                <FollowedUserCard user={item} onPress={handleFollowedUserPress} />
-              )}
-              contentContainerStyle={{ paddingVertical: 4 }}
-            />
-          )}
-        </Surface>
-
-        <Button mode="contained" style={styles.logoutButton} onPress={async () => {
-          await authAPI.logout();
-          navigation.replace('Login');
-        }}>
-          Çıkış Yap
-        </Button>
-      </View>
-
-      {/* Edit Profile Modal */}
-      <Modal visible={editModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <Surface style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Profili Düzenle</Text>
-            <TouchableOpacity onPress={() => pickImage(setEditImage)} style={styles.avatarEditContainer}>
-              {editImage ? (
-                <Image source={{ uri: editImage }} style={styles.avatarEdit} />
-              ) : (
-                <Avatar.Icon size={80} icon="account" color={COLORS.white} style={{ backgroundColor: COLORS.primary }} />
-              )}
-              <Text style={styles.changePhotoText}>Fotoğrafı Değiştir</Text>
-            </TouchableOpacity>
-            <TextInput
-              style={styles.input}
-              value={editName}
-              onChangeText={setEditName}
-              placeholder="Ad Soyad"
-              mode="outlined"
-            />
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
-              <Button onPress={() => setEditModalVisible(false)} mode="outlined" style={{ marginRight: 8 }}>İptal</Button>
-              <Button onPress={saveProfileEdit} mode="contained" loading={savingEdit} disabled={savingEdit}>Kaydet</Button>
+    <>
+      <LinearGradient
+        colors={[COLORS.primary, '#f5f7fa']}
+        style={{ flex: 1 }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={[styles.container, Platform.OS === 'ios' ? { marginTop: 48 } : { marginTop: 24 }]}> 
+          <Surface style={styles.profileCard}>
+            <View style={styles.avatarModernContainer}>
+              <View style={styles.avatarShadow}>
+                {image ? (
+                  <Image source={{ uri: image }} style={styles.avatarModern} />
+                ) : (
+                  <Avatar.Icon size={120} icon="account" color={COLORS.white} style={{ backgroundColor: COLORS.primary, ...styles.avatarModern }} />
+                )}
+              </View>
+            </View>
+            <View style={styles.infoModernSection}>
+              <View style={styles.infoRow}>
+                <IconButton icon="account" size={22} color={COLORS.primary} style={{ marginRight: 8, marginLeft: -8 }} disabled />
+                <Text style={styles.profileValue}>{user?.name || '-'}</Text>
+                <IconButton icon="pencil" size={20} onPress={openEditModal} style={styles.editIcon} />
+              </View>
+              <View style={styles.infoRow}>
+                <IconButton icon="email-outline" size={20} color={COLORS.primary} style={{ marginRight: 8, marginLeft: -8 }} disabled />
+                <Text style={styles.profileValue}>{user?.email || '-'}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <IconButton icon="account-tie" size={20} color={COLORS.primary} style={{ marginRight: 8, marginLeft: -8 }} disabled />
+                <Text style={styles.profileValue}>{user?.role || '-'}</Text>
+              </View>
             </View>
           </Surface>
+          <Button mode="contained" style={styles.logoutModernButton} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} onPress={async () => {
+            await authAPI.logout();
+            navigation.replace('Login');
+          }}>
+            <IconButton icon="logout" size={20} color={COLORS.white} style={{ margin: 0, padding: 0 }} disabled /> Çıkış Yap
+          </Button>
+        </View>
+      </ScrollView>
+    </LinearGradient>
+    <Portal>
+      <Modal
+        visible={editModalVisible}
+        onDismiss={() => setEditModalVisible(false)}
+        contentContainerStyle={styles.modalContentModern}
+      >
+        <Text style={styles.modalTitleModern}>Profili Düzenle</Text>
+        <TouchableOpacity onPress={() => pickImage(setEditImage)} style={styles.avatarEditContainerModern}>
+          {editImage ? (
+            <Image source={{ uri: editImage }} style={styles.avatarEditModern} />
+          ) : (
+            <Avatar.Icon size={90} icon="account" color={COLORS.white} style={{ backgroundColor: COLORS.primary, ...styles.avatarEditModern }} />
+          )}
+          <Text style={styles.changePhotoTextModern}>Fotoğrafı Değiştir</Text>
+        </TouchableOpacity>
+        <TextInput
+          style={styles.inputModern}
+          value={editName}
+          onChangeText={setEditName}
+          placeholder="Ad Soyad"
+          mode="outlined"
+          left={<TextInput.Icon icon="account" />}
+        />
+        <TextInput
+          style={styles.inputModern}
+          value={editRole}
+          onChangeText={setEditRole}
+          placeholder="Rol"
+          mode="outlined"
+          left={<TextInput.Icon icon="account-tie" />}
+        />
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
+          <Button onPress={() => setEditModalVisible(false)} mode="outlined" style={{ marginRight: 8 }}>İptal</Button>
+          <Button onPress={saveProfileEdit} mode="contained" loading={savingEdit} disabled={savingEdit}>Kaydet</Button>
         </View>
       </Modal>
-    </ScrollView>
+    </Portal>
+  </>
   );
-};
+}
 
 const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
-    backgroundColor: COLORS.background,
-    paddingBottom: 32,
+    padding: 0,
+    backgroundColor: 'transparent',
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
     alignItems: 'center',
-    padding: 24,
+    paddingHorizontal: 0,
+  },
+  profileCard: {
+    width: '95%',
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    marginBottom: 32,
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  avatarModernContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  avatarShadow: {
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
+    borderRadius: 70,
+    backgroundColor: COLORS.white,
+    padding: 6,
+  },
+  avatarModern: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+  },
+  infoModernSection: {
+    marginTop: 10,
+    width: '100%',
+    paddingHorizontal: 6,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: '#f6f8fb',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.06,
+    elevation: 1,
+  },
+  profileValue: {
+    fontSize: 17,
+    color: COLORS.text,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  editIcon: {
+    marginLeft: 0,
+    marginRight: -12,
+    marginTop: -2,
+  },
+  logoutModernButton: {
+    marginTop: 8,
+    width: '95%',
+    borderRadius: 12,
+    backgroundColor: COLORS.danger,
+    alignSelf: 'center',
+    elevation: 4,
+    shadowColor: COLORS.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    flexDirection: 'row',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContentModern: {
+    width: '90%',
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    padding: 28,
+    elevation: 12,
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+  },
+  modalTitleModern: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    marginBottom: 18,
+    alignSelf: 'flex-start',
+  },
+  avatarEditContainerModern: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  avatarEditModern: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2.5,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+  },
+  changePhotoTextModern: {
+    color: COLORS.primary,
+    marginTop: 8,
+    fontSize: 14,
+    textDecorationLine: 'underline',
+    fontWeight: 'bold',
+  },
+  inputModern: {
+    width: '100%',
+    backgroundColor: COLORS.white,
+    marginBottom: 14,
+    borderRadius: 8,
   },
   centerContainer: {
     flex: 1,
