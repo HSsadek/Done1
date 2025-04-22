@@ -1,5 +1,5 @@
 import axios from 'axios';
-import storage from '../utils/storage';
+
 
 const API_URL = 'http://10.14.9.169:5000/api';///önemli değiştirme 
 
@@ -12,12 +12,19 @@ const api = axios.create({
   timeout: 10000, // 10 saniye timeout
 });
 
+// Bellekte token saklamak için değişken
+let memoryToken = null;
+
+// Login veya register sonrası token'ı belleğe kaydet
+export const setMemoryToken = (token) => {
+  memoryToken = token;
+};
+
 // Request interceptor - token eklemek için
 api.interceptors.request.use(
   async (config) => {
-    const token = await storage.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (memoryToken) {
+      config.headers.Authorization = `Bearer ${memoryToken}`;
     }
     console.log('Request:', {
       method: config.method.toUpperCase(),
@@ -52,7 +59,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token geçersiz veya süresi dolmuş
       // Logout işlemlerini yapın
-      storage.clearAll();
       // TODO: Kullanıcıyı login ekranına yönlendir
     }
 
@@ -81,11 +87,8 @@ export const authAPI = {
   login: async (credentials) => {
     try {
       const response = await api.post('/auth/login', credentials);
-      const { token, ...userData } = response.data;
-      if (token) {
-        await storage.setToken(token);
-        await storage.setUserData(userData);
-      }
+      // Token'ı belleğe kaydet
+      if (response.data.token) setMemoryToken(response.data.token);
       return response;
     } catch (error) {
       console.error('Login Error:', error);
@@ -95,11 +98,8 @@ export const authAPI = {
   register: async (userData) => {
     try {
       const response = await api.post('/auth/register', userData);
-      const { token, ...user } = response.data;
-      if (token) {
-        await storage.setToken(token);
-        await storage.setUserData(user);
-      }
+      // Token'ı belleğe kaydet
+      if (response.data.token) setMemoryToken(response.data.token);
       return response;
     } catch (error) {
       console.error('Registration Error:', error);
@@ -107,7 +107,16 @@ export const authAPI = {
     }
   },
   logout: async () => {
-    await storage.clearAll();
+    memoryToken = null;
+  },
+  getProfile: async () => {
+    try {
+      const response = await api.get('/auth/profile');
+      return response;
+    } catch (error) {
+      console.error('Profil getirme hatası:', error);
+      throw error;
+    }
   },
   getUsers: async () => {
     try {

@@ -4,7 +4,7 @@ import { Text, Button, ActivityIndicator, Avatar, IconButton, Surface } from 're
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { COLORS } from '../constants/theme';
-import storage from '../utils/storage';
+
 import { authAPI } from '../services/api';
 import FollowedUserCard from '../components/FollowedUserCard';
 
@@ -27,17 +27,16 @@ const ProfileScreen = ({ navigation }) => {
       try {
         setLoading(true);
         setError('');
-        const localUser = await storage.getUserData();
-        if (localUser) {
-          setUser(localUser);
-          setImage(localUser.profileImage || null);
-        } else {
-          const response = await authAPI.getProfile();
-          setUser(response.data);
-          setImage(response.data.profileImage || null);
-        }
+        // Her zaman API'dan güncel kullanıcı verisini çek
+        const response = await authAPI.getProfile();
+        setUser(response.data);
+        setImage(response.data.profileImage && response.data.profileImage.trim() !== '' ? response.data.profileImage : null);
       } catch (err) {
-        setError('Profil bilgileri yüklenemedi');
+        if (err.response && err.response.status === 401) {
+          setError('Yetkisiz erişim. Lütfen tekrar giriş yapın.');
+        } else {
+          setError('Profil bilgileri yüklenemedi');
+        }
       } finally {
         setLoading(false);
       }
@@ -99,7 +98,7 @@ const ProfileScreen = ({ navigation }) => {
       await authAPI.updateProfile(payload);
       setUser(prev => ({ ...prev, name: editName, profileImage: profileImageToSend }));
       setImage(profileImageToSend);
-      await storage.setUserData({ ...user, name: editName, profileImage: profileImageToSend });
+
       setEditModalVisible(false);
       // Başarı mesajı göstermek için kısa süreli bir feedback ekleyebilirsiniz
     } catch (err) {

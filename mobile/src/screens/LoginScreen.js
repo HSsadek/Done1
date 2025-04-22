@@ -45,6 +45,8 @@ const LoginScreen = ({ navigation }) => {
       } else {
         const response = await authAPI.login(values);
         console.log('Giriş yanıtı:', response.data);
+        // Giriş başarılıysa profil verisini çek
+        const profileResponse = await authAPI.getProfile();
         navigation.replace('Projects');
       }
     } catch (err) {
