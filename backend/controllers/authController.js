@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -57,7 +58,7 @@ exports.login = async (req, res) => {
                 token: generateToken(user._id)
             });
         } else {
-            res.status(401).json({ message: 'Invalid email or password' });
+            res.status(401).json({ message: 'Geçersiz e-posta veya şifre' });
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -99,6 +100,60 @@ exports.getAllUsers = async (req, res) => {
             .sort({ name: 1 }); // İsimlere göre alfabetik sırala
         
         res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Şifre sıfırlama isteği (e-posta ile token gönder)
+exports.resetPasswordRequest = async (req, res) => {
+    try {
+        console.log('Şifre sıfırlama isteği alındı:', req.body);
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ message: 'E-posta adresi gereklidir.' });
+        }
+        const user = await User.findOne({ email });
+        console.log('Kullanıcı bulundu mu?', user);
+        if (!user) {
+            return res.status(404).json({ message: 'Bu e-posta ile kayıtlı kullanıcı bulunamadı.' });
+        }
+        // Token üret
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = Date.now() + 1000 * 60 * 30; // 30 dakika geçerli
+        await user.save();
+        // E-posta gönder (dummy veya gerçek)
+        const resetUrl = `http://localhost:5500/web/reset-password.html?token=${resetToken}`;
+        // Burada gerçek bir e-posta servisiyle gönderebilirsin
+        // Şimdilik sadece response olarak dönüyoruz
+        // await sendResetEmail(user.email, resetUrl);
+        return res.json({ message: 'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.', resetUrl });
+    } catch (error) {
+        console.error('Şifre sıfırlama isteği sırasında hata:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Şifre sıfırlama (token ile yeni şifre belirle)
+exports.resetPassword = async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) {
+            return res.status(400).json({ message: 'Token ve yeni şifre gereklidir.' });
+        }
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+        if (!user) {
+            return res.status(400).json({ message: 'Geçersiz veya süresi dolmuş şifre sıfırlama bağlantısı.' });
+        }
+        user.password = password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        res.json({ message: 'Şifreniz başarıyla güncellendi.' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

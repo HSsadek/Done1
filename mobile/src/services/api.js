@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 
-const API_URL = 'http://10.14.9.169:5000/api';///önemli değiştirme 
+const API_URL = 'http://10.14.13.173:5000/api';///önemli değiştirme 
 
 
 const api = axios.create({

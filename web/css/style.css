@@ -19,6 +19,16 @@
 }
 
 /* Temel Stiller */
+
+/* Kimlik/doğrulama sayfaları için modern arka plan */
+.auth-bg {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 body {
     font-family: var(--font-family);
     background-color: #f5f7fa;
@@ -198,7 +208,7 @@ body {
     opacity: 1;
 }
 
-/* Profil Fotoğrafı Stilleri */
+
 .profile-image {
     width: 150px;
     height: 150px;

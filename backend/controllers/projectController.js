@@ -5,8 +5,9 @@ const User = require('../models/User'); // Added User model for team validation
 exports.getProjects = async (req, res) => {
     try {
         const projects = await Project.find()
+            .sort({ createdAt: -1 })
             .populate('owner', 'name email')
-            .populate('team', 'name email')
+            .populate('team', 'name email profileImage')
             .populate({ path: 'tasks' }); // Görevleri de getir
         res.json(projects);
     } catch (error) {
@@ -19,7 +20,7 @@ exports.getProject = async (req, res) => {
     try {
         const project = await Project.findById(req.params.id)
             .populate('owner', 'name email')
-            .populate('team', 'name email')
+            .populate('team', 'name email profileImage')
             .populate({
                 path: 'tasks',
                 populate: {
@@ -77,7 +78,7 @@ exports.createProject = async (req, res) => {
 
         const populatedProject = await Project.findById(project._id)
             .populate('owner', 'name email')
-            .populate('team', 'name email');
+            .populate('team', 'name email profileImage');
 
         res.status(201).json(populatedProject);
     } catch (error) {
@@ -111,7 +112,7 @@ exports.updateProject = async (req, res) => {
         
         const updatedProject = await Project.findById(project._id)
             .populate('owner', 'name email')
-            .populate('team', 'name email');
+            .populate('team', 'name email profileImage');
 
         res.json(updatedProject);
     } catch (error) {

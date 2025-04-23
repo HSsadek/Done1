@@ -1,9 +1,21 @@
 // Ana Sayfa (Dashboard) JavaScript Kodu
 
+// Kullanıcı giriş kontrolü: Token yoksa login sayfasına yönlendir (bfcache dahil)
+function checkAuth() {
+    if (!localStorage.getItem('token')) {
+        window.location.replace('login.html');
+    }
+}
+document.addEventListener('DOMContentLoaded', checkAuth);
+window.addEventListener('pageshow', checkAuth);
+
+
 // API URL'leri (Backend entegrasyonu için)
+// Mobil erişim için IP adresini kullanır.
+const LOCAL_IP = window.LOCAL_IP || '10.14.13.173'; // Bilgisayarınızın gerçek IP adresi
 const API_URL = {
-    projects: '/api/projects',
-    tasks: '/api/tasks'
+    projects: `http://${LOCAL_IP}:5000/api/projects`,
+    tasks: `http://${LOCAL_IP}:5000/api/tasks`
 };
 
 // DOM yüklendikten sonra çalışacak fonksiyonlar
@@ -18,61 +30,124 @@ document.addEventListener('DOMContentLoaded', () => {
 // Event listener'ları ayarla
 function setupEventListeners() {
     // Yeni proje ekleme butonu
-    document.getElementById('saveProjectBtn').addEventListener('click', saveProject);
-    
-    // Ekip üyesi ekleme butonu
-    document.getElementById('addTeamMember').addEventListener('click', addTeamMember);
-    
-    // Yeni görev ekleme butonu
-    document.getElementById('addTaskBtn').addEventListener('click', addTaskForm);
-    
-    // Proje güncelleme butonu
-    document.getElementById('updateProjectBtn').addEventListener('click', updateProject);
-    
-    // Düzenleme modalı için ekip üyesi ekleme butonu
-    document.getElementById('editAddTeamMember').addEventListener('click', editAddTeamMember);
+    const saveProjectBtn = document.getElementById('saveProjectBtn');
+    if (saveProjectBtn) saveProjectBtn.addEventListener('click', saveProject);
+
+    // Ekip üyesi arama ve seçim (autocomplete)
+    const teamMemberInput = document.getElementById('teamMemberInput');
+    const suggestionsBox = document.getElementById('teamMemberSuggestions');
+    const teamMembersList = document.getElementById('teamMembersList');
+    let debounceTimer, lastQuery = '';
+
+    if (teamMemberInput) {
+    teamMemberInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length < 2) {
+            suggestionsBox.style.display = 'none';
+            suggestionsBox.innerHTML = '';
+            return;
+        }
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+            if (query === lastQuery) return;
+            lastQuery = query;
+            try {
+                const res = await fetch(`${API_URL.profile.replace('/profile','/auth/search')}?search=${encodeURIComponent(query)}`);
+                if (!res.ok) throw new Error('Kullanıcılar alınamadı');
+                let users = await res.json();
+                users = users.sort((a, b) => a.name.localeCompare(b.name));
+                if (users.length === 0) {
+                    suggestionsBox.innerHTML = '<li class="list-group-item">Kullanıcı bulunamadı</li>';
+                } else {
+                    suggestionsBox.innerHTML = users.map(u => `<li class="list-group-item list-group-item-action" data-email="${u.email}" data-name="${u.name}">${u.name} &lt;${u.email}&gt;</li>`).join('');
+                }
+                suggestionsBox.style.display = 'block';
+            } catch (err) {
+                suggestionsBox.innerHTML = '<li class="list-group-item text-danger">Hata: Kullanıcılar alınamadı</li>';
+                suggestionsBox.style.display = 'block';
+            }
+        }, 300);
+    });
 }
 
-// Projeleri yükle (API'den veri çekme simülasyonu)
+    if (suggestionsBox) suggestionsBox.addEventListener('mousedown', function(e) {
+        if (e.target.tagName === 'LI' && e.target.hasAttribute('data-email')) {
+            const name = e.target.getAttribute('data-name');
+            const email = e.target.getAttribute('data-email');
+            addTeamMemberTag(name, email);
+            teamMemberInput.value = '';
+            suggestionsBox.style.display = 'none';
+            suggestionsBox.innerHTML = '';
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!suggestionsBox.contains(e.target) && e.target !== teamMemberInput) {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+
+    // Önceki "Ekle" butonu desteği (manuel ekleme için)
+    const addTeamMemberBtn = document.getElementById('addTeamMember');
+    if (addTeamMemberBtn) addTeamMemberBtn.addEventListener('click', function() {
+        const value = teamMemberInput.value.trim();
+        if (value) addTeamMemberTag(value, value);
+        teamMemberInput.value = '';
+        suggestionsBox.style.display = 'none';
+    });
+    
+    // Yeni görev ekleme butonu
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    if (addTaskBtn) addTaskBtn.addEventListener('click', addTaskForm);
+    
+    // Proje güncelleme butonu
+    const updateProjectBtn = document.getElementById('updateProjectBtn');
+    if (updateProjectBtn) updateProjectBtn.addEventListener('click', updateProject);
+    
+    // Düzenleme modalı için ekip üyesi ekleme butonu
+    const editAddTeamMemberBtn = document.getElementById('editAddTeamMember');
+    if (editAddTeamMemberBtn) editAddTeamMemberBtn.addEventListener('click', editAddTeamMember);
+}
+
+// Projeleri yükle (sadece giriş yapan kullanıcıya ait gerçek projeler)
 async function loadProjects() {
     try {
-        // Gerçek uygulamada burada API çağrısı yapılacak
-        // const response = await fetch(API_URL.projects);
-        // const projects = await response.json();
-        
-        // Şimdilik örnek veri kullanıyoruz
-        const projects = [
-            {
-                id: 'project1',
-                name: 'Web Sitesi Yenileme',
-                description: 'Şirket web sitesinin yeniden tasarlanması ve geliştirilmesi',
-                teamMembers: ['Ahmet Yılmaz', 'Ayşe Demir', 'Mehmet Kaya'],
-                taskCount: 5,
-                completedTaskCount: 1
-            },
-            {
-                id: 'project2',
-                name: 'Mobil Uygulama Geliştirme',
-                description: 'Şirket için iOS ve Android mobil uygulaması geliştirme',
-                teamMembers: ['Zeynep Şahin', 'Ali Yıldız'],
-                taskCount: 8,
-                completedTaskCount: 3
-            },
-            {
-                id: 'project3',
-                name: 'Veritabanı Optimizasyonu',
-                description: 'Mevcut veritabanı yapısının optimize edilmesi',
-                teamMembers: ['Mehmet Kaya', 'Ahmet Yılmaz'],
-                taskCount: 3,
-                completedTaskCount: 0
-            }
-        ];
-        
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await fetch(API_URL.projects, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Projeler getirilemedi');
+        const allProjects = await response.json();
+        // Kullanıcının sahibi olduğu veya ekipte olduğu projeleri filtrele
+        const userId = await getUserIdFromProfile(token);
+        const userProjects = allProjects.filter(p => p.owner._id === userId || (p.team && p.team.some(t => t._id === userId)));
+        // Proje kartına uygun şekilde dönüştür
+        const projects = userProjects.map(p => ({
+            id: p._id,
+            name: p.title,
+            description: p.description,
+            startDate: p.startDate,
+            createdAt: p.createdAt,
+            taskCount: p.tasks ? p.tasks.length : 0,
+            completedTaskCount: p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0,
+            teamMembers: Array.isArray(p.teamMembers) && p.teamMembers.length > 0 ? p.teamMembers : (Array.isArray(p.team) ? p.team : [])
+        }));
         renderProjects(projects);
     } catch (error) {
         console.error('Projeler yüklenirken hata oluştu:', error);
         showAlert('Projeler yüklenirken bir hata oluştu.', 'danger');
     }
+}
+
+// Token ile kullanıcı id'sini getir
+async function getUserIdFromProfile(token) {
+    const response = await fetch('http://localhost:5000/api/auth/profile', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) return null;
+    const user = await response.json();
+    return user._id;
 }
 
 // Projeleri ekrana render et
@@ -93,6 +168,7 @@ function renderProjects(projects) {
         return;
     }
     
+    // Backend zaten sıralı gönderiyor, tekrar sıralama yok
     projects.forEach(project => {
         const projectCard = createProjectCard(project);
         projectsList.appendChild(projectCard);
@@ -108,45 +184,86 @@ function createProjectCard(project) {
     const progress = project.taskCount > 0 ? Math.round((project.completedTaskCount / project.taskCount) * 100) : 0;
     
     col.innerHTML = `
-        <div class="card project-card h-100">
-            <div class="card-body">
-                <h5 class="card-title">${project.name}</h5>
-                <p class="card-text">${project.description}</p>
-                <div class="progress mb-3" style="height: 10px;">
-                    <div class="progress-bar" role="progressbar" style="width: ${progress}%" 
-                        aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
-                        ${progress}%
+        <div class="card project-card h-100 shadow-lg border-0 rounded-4 position-relative project-modern-card" style="cursor:pointer; transition: box-shadow .2s;">
+            <div class="card-body pb-4">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title fw-bold mb-1 text-primary"><i class="bi bi-folder2-open me-2"></i>${project.name}</h5>
                     </div>
+                    <button class="btn btn-light btn-sm edit-project-btn border-0 ms-2 position-absolute top-0 end-0 mt-2 me-2" data-project-id="${project.id}" onclick="event.stopPropagation();"><i class="bi bi-pencil"></i></button>
                 </div>
-                <p class="card-text text-muted small">
-                    <i class="bi bi-check-circle-fill"></i> ${project.completedTaskCount}/${project.taskCount} görev tamamlandı
-                </p>
+                <p class="card-text mb-2 text-secondary">${project.description}</p>
                 <div class="d-flex align-items-center mb-3">
-                    <span class="me-2 small">Ekip:</span>
-                    <div class="team-members-avatars">
-                        ${project.teamMembers.map((member, index) => `
-                            <span class="badge bg-primary me-1" title="${member}">
-                                ${member.split(' ').map(n => n[0]).join('')}
-                            </span>
-                        `).join('')}
+                    <span class="me-2 small text-muted"><i class="bi bi-people"></i> Ekip:</span>
+                    <div class="team-members-avatars d-flex align-items-center">
+                        ${(Array.isArray(project.teamMembers) ? project.teamMembers.slice(0,5) : []).map((member, index) => {
+                            let img = '';
+                            let name = '';
+                            if (typeof member === 'object' && member !== null) {
+                                img = member.profileImage || '';
+                                name = member.name || member.email || '';
+                            } else {
+                                name = member;
+                            }
+                            if (img) {
+                                return `<img src="${img}" class="rounded-circle me-1 border" alt="${name}" title="${name}" style="width:32px;height:32px;object-fit:cover;">`;
+                            } else {
+                                const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
+                                return `<span class="rounded-circle bg-primary text-white d-inline-flex justify-content-center align-items-center me-1 border" title="${name}" style="width:32px;height:32px;font-size:1rem;">${initials}</span>`;
+                            }
+                        }).join('')}
+                        ${(Array.isArray(project.teamMembers) && project.teamMembers.length > 5) ? `<span class="badge bg-secondary ms-1">+${project.teamMembers.length-5}</span>` : ''}
+                    </div>
+                    <span class="ms-2 small text-muted">${Array.isArray(project.teamMembers) ? project.teamMembers.length : 0} üye</span>
+                </div>
+                <div class="progress mb-2" style="height: 8px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: ${progress}%" 
+                        aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
                     </div>
                 </div>
-            </div>
-            <div class="card-footer">
-                <a href="project.html?id=${project.id}" class="btn btn-sm btn-primary">
-                    <i class="bi bi-kanban me-1"></i> Görev Panosu
-                </a>
-                <button class="btn btn-sm btn-outline-secondary float-end edit-project-btn" data-project-id="${project.id}">
-                    <i class="bi bi-pencil"></i>
-                </button>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="text-muted small"><i class="bi bi-check-circle-fill"></i> ${project.completedTaskCount}/${project.taskCount} görev tamamlandı</span>
+                    <a href="project.html?id=${project.id}" class="btn btn-outline-primary btn-sm px-3" onclick="event.stopPropagation();">
+                        <i class="bi bi-kanban me-1"></i> Görev Panosu
+                    </a>
+                </div>
             </div>
         </div>
     `;
     
+    // Kartın tamamına tıklanınca detay modalını aç
+    col.querySelector('.card').addEventListener('click', function(e) {
+        // Eğer tıklama edit butonundan geliyorsa detay açma
+        if (e.target.closest('.edit-project-btn')) return;
+        showProjectDetails(project);
+    });
+
     // Düzenleme butonuna tıklama olayını ekle
-    col.querySelector('.edit-project-btn').addEventListener('click', () => openEditProjectModal(project));
+    col.querySelector('.edit-project-btn').addEventListener('click', () => {
+        window.location.href = `project.html?id=${project.id}`;
+    });
+    // Hover efekti
+    col.querySelector('.project-modern-card').addEventListener('mouseenter', function() {
+        this.style.boxShadow = '0 0.5rem 1.5rem rgba(0,0,0,.15)';
+    });
+    col.querySelector('.project-modern-card').addEventListener('mouseleave', function() {
+        this.style.boxShadow = '';
+    });
     
     return col;
+}
+
+// Proje detaylarını modalda göster
+function showProjectDetails(project) {
+    // Modal içeriğini doldur
+    document.getElementById('projectDetailTitle').textContent = project.name;
+    document.getElementById('projectDetailDescription').textContent = project.description;
+    document.getElementById('projectDetailTaskCount').textContent = project.taskCount;
+    document.getElementById('projectDetailCompletedTaskCount').textContent = project.completedTaskCount;
+    document.getElementById('projectDetailTeam').innerHTML = (Array.isArray(project.teamMembers) ? project.teamMembers : []).map(member => `<span class='badge bg-primary me-1'>${member}</span>`).join('');
+    // Modalı aç
+    const modal = new bootstrap.Modal(document.getElementById('projectDetailModal'));
+    modal.show();
 }
 
 // Yeni proje kaydet

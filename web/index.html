@@ -12,7 +12,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="index.html">Proje Yönetim Sistemi</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Menüyü Aç/Kapat">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
@@ -61,9 +61,9 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Ekip Üyeleri</label>
-                            <div class="input-group mb-2">
-                                <input type="text" class="form-control" id="teamMemberInput" placeholder="E-posta veya kullanıcı adı">
-                                <button class="btn btn-outline-secondary" type="button" id="addTeamMember">Ekle</button>
+                            <div class="input-group mb-2 position-relative">
+                                <input type="text" class="form-control" id="teamMemberInput" placeholder="E-posta veya kullanıcı adı ile ara" autocomplete="off">
+                                <ul class="list-group position-absolute w-100" id="teamMemberSuggestions"></ul>
                             </div>
                             <div id="teamMembersList" class="d-flex flex-wrap gap-2 mt-2">
                                 <!-- Ekip üyeleri buraya eklenecek -->

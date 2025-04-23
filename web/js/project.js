@@ -1,9 +1,13 @@
 // Proje Detay Sayfası JavaScript Kodu
 
 // API URL'leri (Backend entegrasyonu için)
+// Mobil erişim için IP adresini kullanır.
+const LOCAL_IP = window.LOCAL_IP || '10.14.13.173'; // Bilgisayarınızın gerçek IP adresi
 const API_URL = {
-    projects: '/api/projects',
-    tasks: '/api/tasks'
+    projects: `http://${LOCAL_IP}:5000/api/projects`,
+    tasks: `http://${LOCAL_IP}:5000/api/tasks`,
+    profile: `http://${LOCAL_IP}:5000/api/profile`,
+    activities: `http://${LOCAL_IP}:5000/api/activities`
 };
 
 // Proje ve görev verileri
@@ -54,75 +58,47 @@ function setupEventListeners() {
     setupDragAndDrop();
 }
 
-// Proje detaylarını yükle (API'den veri çekme simülasyonu)
+// Proje detaylarını yükle (API'den veri çekme)
 async function loadProjectDetails(projectId) {
     try {
-        // Gerçek uygulamada burada API çağrısı yapılacak
-        // const response = await fetch(`${API_URL.projects}/${projectId}`);
-        // currentProject = await response.json();
-        
-        // Şimdilik örnek veri kullanıyoruz
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Kimlik doğrulama hatası!');
+        const response = await fetch(`${API_URL.projects}/${projectId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Proje detayları getirilemedi!');
+        const data = await response.json();
+        // API'den gelen veriyi currentProject formatına dönüştür
         currentProject = {
-            id: projectId,
-            name: 'Web Sitesi Yenileme',
-            description: 'Şirket web sitesinin yeniden tasarlanması ve geliştirilmesi',
-            teamMembers: ['Ahmet Yılmaz', 'Ayşe Demir', 'Mehmet Kaya'],
-            tasks: [
-                {
-                    id: 'task1',
-                    title: 'Tasarım Taslakları',
-                    description: 'Ana sayfa ve iç sayfalar için tasarım taslakları hazırlanacak',
-                    startDate: '2023-06-01',
-                    endDate: '2023-06-15',
-                    assignee: 'Ahmet Yılmaz',
-                    status: 'done'
-                },
-                {
-                    id: 'task2',
-                    title: 'Frontend Geliştirme',
-                    description: 'HTML, CSS ve JavaScript ile frontend geliştirme',
-                    startDate: '2023-06-16',
-                    endDate: '2023-07-15',
-                    assignee: 'Ayşe Demir',
-                    status: 'inProgress'
-                },
-                {
-                    id: 'task3',
-                    title: 'Backend Entegrasyonu',
-                    description: 'API entegrasyonu ve backend bağlantıları',
-                    startDate: '2023-07-01',
-                    endDate: '2023-07-30',
-                    assignee: 'Mehmet Kaya',
-                    status: 'notStarted'
-                },
-                {
-                    id: 'task4',
-                    title: 'Testler',
-                    description: 'Fonksiyonel ve kullanıcı testleri',
-                    startDate: '2023-08-01',
-                    endDate: '2023-08-15',
-                    assignee: 'Ayşe Demir',
-                    status: 'notStarted'
-                },
-                {
-                    id: 'task5',
-                    title: 'İçerik Girişi',
-                    description: 'Web sitesi içeriklerinin girilmesi',
-                    startDate: '2023-07-15',
-                    endDate: '2023-08-15',
-                    assignee: 'Ahmet Yılmaz',
-                    status: 'test'
+            id: data._id || data.id,
+            name: data.title || data.name,
+            description: data.description,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            owner: data.owner || null,
+            teamMembers: data.teamMembers || data.team || [],
+            tasks: Array.isArray(data.tasks) ? data.tasks.map(task => {
+                // Eğer task objesinde title yoksa, alt objeden al
+                if (typeof task === 'object' && task !== null) {
+                    return {
+                        id: task._id || task.id,
+                        title: task.title || task.name || '',
+                        description: task.description || '',
+                        startDate: task.startDate,
+                        endDate: task.endDate,
+                        assignee: (typeof task.assignee === 'object' && task.assignee !== null) ? (task.assignee.name || task.assignee.email || '') : (task.assignee || ''),
+                        status: task.status || 'notStarted'
+                    };
                 }
-            ]
+                return task;
+            }) : []
         };
-        
+
         // Proje detaylarını görüntüle
         renderProjectDetails();
-        
         // Görevleri görüntüle
         tasks = currentProject.tasks;
         renderTasks();
-        
         // Ekip üyelerini görev atama seçeneğine ekle
         updateTaskAssigneeOptions();
     } catch (error) {
@@ -136,7 +112,83 @@ function renderProjectDetails() {
     document.getElementById('projectTitle').textContent = currentProject.name;
     document.getElementById('projectDescription').textContent = currentProject.description;
     document.title = `${currentProject.name} - Proje Yönetim Sistemi`;
+
+    // Başlangıç ve bitiş tarihlerini göster
+    let dateRow = document.getElementById('projectDatesRow');
+    if (!dateRow) {
+        dateRow = document.createElement('div');
+        dateRow.className = 'row mb-2';
+        dateRow.id = 'projectDatesRow';
+        const descElem = document.getElementById('projectDescription');
+        descElem.parentNode.insertBefore(dateRow, descElem.nextSibling);
+    }
+    dateRow.innerHTML = `
+        <div class="col-auto">
+            <span class="badge bg-light text-dark border me-1"><i class="bi bi-calendar-event"></i> Başlangıç: ${currentProject.startDate ? new Date(currentProject.startDate).toLocaleDateString('tr-TR') : '-'}</span>
+        </div>
+        <div class="col-auto">
+            <span class="badge bg-light text-dark border"><i class="bi bi-calendar-check"></i> Bitiş: ${currentProject.endDate ? new Date(currentProject.endDate).toLocaleDateString('tr-TR') : '-'}</span>
+        </div>
+    `;
+
+    // Proje sahibi ve ekip üyelerini göster
+    let teamRow = document.getElementById('projectTeamRow');
+    if (!teamRow) {
+        teamRow = document.createElement('div');
+        teamRow.className = 'row mb-2';
+        teamRow.id = 'projectTeamRow';
+        const titleElem = document.getElementById('projectTitle');
+        titleElem.parentNode.insertBefore(teamRow, titleElem.nextSibling);
+    }
+    let ownerBadge = '';
+    if (currentProject.owner && (typeof currentProject.owner === 'object')) {
+        ownerBadge = `<span class='badge bg-warning text-dark me-2'><i class="bi bi-person-badge"></i> Proje Sahibi: ${currentProject.owner.name || currentProject.owner.email || 'Sahip'}</span>`;
+    } else if (currentProject.owner) {
+        ownerBadge = `<span class='badge bg-warning text-dark me-2'><i class="bi bi-person-badge"></i> Proje Sahibi: ${currentProject.owner}</span>`;
+    }
+    // Modern ekip üyesi kartları (grid)
+    let teamListHTML = '';
+    if (currentProject.teamMembers && currentProject.teamMembers.length > 0) {
+        teamListHTML = `<div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3 mt-2">` +
+            currentProject.teamMembers.map(member => {
+                if (typeof member === 'string') {
+                    return `<div class='col'><div class="card h-100 shadow-sm team-card"><div class="card-body d-flex flex-column align-items-center justify-content-center"><span class='rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center mb-2' style='width:48px;height:48px;font-size:20px;font-weight:bold;'>${member[0].toUpperCase()}</span><h6 class="mb-0">${member}</h6></div></div></div>`;
+                }
+                if (typeof member === 'object' && member !== null) {
+                    let profileImg = '';
+                    if (member.profileImage) {
+                        profileImg = `<img src='${member.profileImage}' class='rounded-circle mb-2' alt='${member.name || member.email || ''}' style='width:48px;height:48px;object-fit:cover;border:2px solid #fff;background:#eee;box-shadow:0 1px 6px #0001;'>`;
+                    } else {
+                        let initials = '';
+                        if (member.name) {
+                            initials = member.name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+                        } else if (member.email) {
+                            initials = member.email[0].toUpperCase();
+                        } else {
+                            initials = '?';
+                        }
+                        profileImg = `<span class='rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center mb-2' style='width:48px;height:48px;font-size:20px;font-weight:bold;'>${initials}</span>`;
+                    }
+                    let name = member.name ? `<h6 class="mb-0">${member.name}</h6>` : '';
+                    let email = member.email ? `<div class='text-muted' style='font-size:13px;'>${member.email}</div>` : '';
+                    let role = member.role ? `<span class='badge bg-info mt-2'>${member.role}</span>` : '';
+                    return `<div class='col'><div class="card h-100 shadow-sm team-card team-card-hover"><div class="card-body d-flex flex-column align-items-center justify-content-center">${profileImg}${name}${email}${role}</div></div></div>`;
+                }
+                return '';
+            }).join('') + `</div>`;
+    } else {
+        teamListHTML = '<span class="text-muted">Yok</span>';
+    }
+    teamRow.innerHTML = `<div class="col-12">${ownerBadge}<strong>Ekip Üyeleri:</strong>${teamListHTML}</div>`;
+    // Ekstra stil (hover vurgusu)
+    const style = document.createElement('style');
+    style.innerHTML = `
+    .team-card-hover:hover {box-shadow:0 4px 24px #007bff33;border:1.5px solid #0d6efd;transform:translateY(-3px) scale(1.03);transition:all .2s;}
+    .team-card {transition:all .2s;}
+    `;
+    document.head.appendChild(style);
 }
+
 
 // Görevleri ekrana render et
 function renderTasks() {
@@ -147,7 +199,22 @@ function renderTasks() {
     
     // Görevleri durumlarına göre ilgili sütunlara ekle
     tasks.forEach(task => {
-        const column = document.querySelector(`.kanban-column-content[data-status="${task.status}"]`);
+        // Status'u normalize et
+        let status = (task.status || 'notStarted').toString().toLowerCase().trim();
+        // Türkçe -> İngilizce eşleştirme
+        if (status === 'yapılacak' || status === 'yapilacak') status = 'notStarted';
+        else if (status === 'devam ediyor' || status === 'devamediyor') status = 'inProgress';
+        else if (status === 'test edilecek' || status === 'testedilecek') status = 'test';
+        else if (status === 'tamamlandı' || status === 'tamamlandi') status = 'done';
+        // İngilizce anahtarlar için normalization
+        status = status
+            .replace(/\s+/g, '')
+            .replace(/[İIı]/g, 'i')
+            .replace(/^inprogress$/i, 'inProgress')
+            .replace(/^notstarted$/i, 'notStarted')
+            .replace(/^done$/i, 'done')
+            .replace(/^test$/i, 'test');
+        const column = document.querySelector(`.kanban-column-content[data-status="${status}"]`);
         if (column) {
             const taskCard = createTaskCard(task);
             column.appendChild(taskCard);

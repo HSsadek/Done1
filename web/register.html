@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kayıt Ol - Proje Yönetim Sistemi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="js/auth-guard.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-bg">
+    <div class="container d-flex align-items-center justify-content-center min-vh-100">
+        <div class="card shadow p-4 reset-card mx-auto">
+            <div class="text-center mb-4">
+                <i class="bi bi-person-plus display-4 text-primary"></i>
+                <h2 class="mt-2">Kayıt Ol</h2>
+                <p class="text-muted">Hesabınızı oluşturmak için bilgilerinizi girin.</p>
+            </div>
+            <form id="registerForm">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Ad Soyad</label>
+                    <input type="text" class="form-control" id="name" name="name" placeholder="Adınızı ve soyadınızı girin" required>
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">E-posta</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="E-posta adresinizi girin" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Şifre</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Şifrenizi girin" required minlength="6">
+                </div>
+                <div class="mb-3">
+                    <label for="passwordConfirm" class="form-label">Şifre (Tekrar)</label>
+                    <input type="password" class="form-control" id="passwordConfirm" name="passwordConfirm" placeholder="Şifrenizi tekrar girin" required minlength="6">
+                </div>
+                <div id="registerMsg" class="mb-3"></div>
+                <button type="submit" class="btn btn-primary w-100">Kayıt Ol</button>
+            </form>
+            <div class="text-center mt-3">
+                <a href="login.html" class="small-link">Zaten hesabın var mı? Giriş Yap</a>
+            </div>
+        </div>
+    </div>
+    <script src="js/register.js"></script>
+</body>
+</html>

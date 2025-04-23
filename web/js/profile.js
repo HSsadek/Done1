@@ -2,9 +2,10 @@
 
 // API URL'leri (Backend entegrasyonu için)
 const API_URL = {
-    profile: '/api/profile',
-    projects: '/api/projects',
-    activities: '/api/activities'
+    projects: 'http://localhost:5000/api/projects',
+    tasks: 'http://localhost:5000/api/tasks',
+    profile: 'http://localhost:5000/api/auth/profile',
+    activities: 'http://localhost:5000/api/activities'
 };
 
 // DOM yüklendikten sonra çalışacak fonksiyonlar
@@ -47,35 +48,64 @@ function setupEventListeners() {
             }, 500);
         });
     });
+    // Çıkış yap butonu
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            localStorage.clear(); // Tüm localStorage'ı temizle
+window.location.replace('login.html'); // login.html'e yönlendir
+setTimeout(() => { window.location.reload(true); }, 100); // Sekmeyi tam yenile
+        });
+    }
 }
 
-// Kullanıcı profilini yükle (API'den veri çekme simülasyonu)
+// Kullanıcı profilini yükle (gerçek API)
 async function loadUserProfile() {
     try {
-        // Gerçek uygulamada burada API çağrısı yapılacak
-        // const response = await fetch(API_URL.profile);
-        // const userData = await response.json();
-        
-        // Şimdilik örnek veri kullanıyoruz
-        const userData = {
-            id: 'user1',
-            name: 'Ahmet Yılmaz',
-            email: 'ahmet.yilmaz@example.com',
-            role: 'Proje Yöneticisi',
-            profileImage: './images/default-profile.svg',
-            stats: {
-                totalProjects: 5,
-                completedTasks: 12,
-                pendingTasks: 8
-            }
-        };
-        
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await fetch(API_URL.profile, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Profil getirilemedi');
+        const userData = await response.json();
+        // İstatistikleri doldurmak için projeler de lazım
+        const stats = await fetchUserStats(token, userData._id);
+        userData.stats = stats;
         renderUserProfile(userData);
     } catch (error) {
         console.error('Kullanıcı bilgileri yüklenirken hata oluştu:', error);
         showAlert('Kullanıcı bilgileri yüklenirken bir hata oluştu.', 'danger');
     }
 }
+
+// Kullanıcıya ait proje ve görev istatistiklerini getir
+async function fetchUserStats(token, userId) {
+    try {
+        const projectsResponse = await fetch(API_URL.projects, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!projectsResponse.ok) throw new Error('Projeler getirilemedi');
+        const allProjects = await projectsResponse.json();
+        // Kullanıcının sahibi olduğu veya ekipte olduğu projeler
+        const userProjects = allProjects.filter(p => p.owner._id === userId || (p.team && p.team.some(t => t._id === userId)));
+        let completedTasks = 0, pendingTasks = 0;
+        userProjects.forEach(project => {
+            if (project.tasks && Array.isArray(project.tasks)) {
+                completedTasks += project.tasks.filter(task => task.status === 'Tamamlandı').length;
+                pendingTasks += project.tasks.filter(task => task.status !== 'Tamamlandı').length;
+            }
+        });
+        return {
+            totalProjects: userProjects.length,
+            completedTasks,
+            pendingTasks
+        };
+    } catch (error) {
+        return { totalProjects: 0, completedTasks: 0, pendingTasks: 0 };
+    }
+}
+
 
 // Kullanıcı profilini ekrana render et
 function renderUserProfile(userData) {
@@ -103,44 +133,44 @@ function renderUserProfile(userData) {
     document.getElementById('settingsProfileImage').src = userData.profileImage;
 }
 
-// Kullanıcının projelerini yükle (API'den veri çekme simülasyonu)
+// Kullanıcının projelerini yükle (gerçek API)
 async function loadUserProjects() {
     try {
-        // Gerçek uygulamada burada API çağrısı yapılacak
-        // const response = await fetch(`${API_URL.projects}?userId=user1`);
-        // const projects = await response.json();
-        
-        // Şimdilik örnek veri kullanıyoruz
-        const projects = [
-            {
-                id: 'project1',
-                name: 'Web Sitesi Yenileme',
-                description: 'Şirket web sitesinin yeniden tasarlanması ve geliştirilmesi',
-                taskCount: 5,
-                completedTaskCount: 1
-            },
-            {
-                id: 'project2',
-                name: 'Mobil Uygulama Geliştirme',
-                description: 'Şirket için iOS ve Android mobil uygulaması geliştirme',
-                taskCount: 8,
-                completedTaskCount: 3
-            },
-            {
-                id: 'project3',
-                name: 'Veritabanı Optimizasyonu',
-                description: 'Mevcut veritabanı yapısının optimize edilmesi',
-                taskCount: 3,
-                completedTaskCount: 0
-            }
-        ];
-        
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await fetch(API_URL.projects, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Projeler getirilemedi');
+        const allProjects = await response.json();
+        // Kullanıcının sahibi olduğu veya ekipte olduğu projeleri filtrele
+        const userId = await getUserIdFromProfile(token);
+        const userProjects = allProjects.filter(p => p.owner._id === userId || (p.team && p.team.some(t => t._id === userId)));
+        // Proje kartına uygun şekilde dönüştür
+        const projects = userProjects.map(p => ({
+            id: p._id,
+            name: p.title,
+            description: p.description,
+            taskCount: p.tasks ? p.tasks.length : 0,
+            completedTaskCount: p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0
+        }));
         renderUserProjects(projects);
     } catch (error) {
         console.error('Projeler yüklenirken hata oluştu:', error);
         showAlert('Projeler yüklenirken bir hata oluştu.', 'danger');
     }
 }
+
+// Token ile kullanıcı id'sini getir
+async function getUserIdFromProfile(token) {
+    const response = await fetch(API_URL.profile, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) return null;
+    const user = await response.json();
+    return user._id;
+}
+
 
 // Kullanıcının projelerini ekrana render et
 function renderUserProjects(projects) {
