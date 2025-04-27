@@ -121,7 +121,16 @@ async function loadProjects() {
         const allProjects = await response.json();
         // Kullanıcının sahibi olduğu veya ekipte olduğu projeleri filtrele
         const userId = await getUserIdFromProfile(token);
-        const userProjects = allProjects.filter(p => p.owner._id === userId || (p.team && p.team.some(t => t._id === userId)));
+        console.log('allProjects', allProjects);
+console.log('userId', userId);
+const userProjects = allProjects.filter(p => {
+    // Bazı backendlerde owner._id yerine owner olabilir
+    const ownerId = p.owner && (p.owner._id || p.owner);
+    // Ekip üyeleri bazen team veya teamMembers olabilir
+    const teamArr = Array.isArray(p.team) ? p.team : (Array.isArray(p.teamMembers) ? p.teamMembers : []);
+    return String(ownerId) === String(userId) || teamArr.some(t => String(t._id || t) === String(userId));
+});
+console.log('userProjects (filtered)', userProjects);
         // Proje kartına uygun şekilde dönüştür
         const projects = userProjects.map(p => ({
             id: p._id,

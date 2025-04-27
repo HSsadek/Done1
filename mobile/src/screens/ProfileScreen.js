@@ -127,9 +127,12 @@ const ProfileScreen = ({ navigation }) => {
       // Backend'e profil güncelleme isteği gönder
       const payload = { name: editName, profileImage: profileImageToSend, role: editRole };
       await authAPI.updateProfile(payload);
-      setUser(prev => ({ ...prev, name: editName, profileImage: profileImageToSend, role: editRole }));
+      const updatedUser = { ...user, name: editName, profileImage: profileImageToSend, role: editRole };
+      setUser(updatedUser);
       setImage(profileImageToSend);
-
+      // Profil güncelleme sonrası local storage'ı güncelle
+      const { setUserData } = require('../utils/storage').storage;
+      await setUserData(updatedUser);
       setEditModalVisible(false);
       // Başarı mesajı göstermek için kısa süreli bir feedback ekleyebilirsiniz
     } catch (err) {

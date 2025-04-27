@@ -41,13 +41,6 @@ const ProjectCard = ({ project, onPress, onDelete }) => {
       <Surface style={styles.card}>
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={1}>{title}</Text>
-          <Chip 
-            mode="flat"
-            style={[styles.statusChip, { backgroundColor: COLORS.primary }]}
-            textStyle={styles.statusText}
-          >
-            {status}
-          </Chip>
         </View>
 
         <Text style={styles.description} numberOfLines={2}>{description}</Text>

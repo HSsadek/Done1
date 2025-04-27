@@ -4,12 +4,21 @@ import { TextInput, Button, Surface, Text, List } from 'react-native-paper';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { COLORS } from '../constants/theme';
 
-const TaskModal = ({ visible, onClose, onSubmit, teamMembers = [], initialValues = {} }) => {
+const TaskModal = ({ visible, onClose, onSubmit, teamMembers = [], initialValues = {}, readOnly = false }) => {
   const [title, setTitle] = useState(initialValues.title || '');
   const [description, setDescription] = useState(initialValues.description || '');
   const [assignedTo, setAssignedTo] = useState(initialValues.assignedTo || null);
   const [startDate, setStartDate] = useState(initialValues.startDate || null);
   const [endDate, setEndDate] = useState(initialValues.endDate || null);
+
+  // Modal açıldığında veya initialValues değiştiğinde state'i güncelle
+  React.useEffect(() => {
+    setTitle(initialValues.title || '');
+    setDescription(initialValues.description || '');
+    setAssignedTo(initialValues.assignedTo || null);
+    setStartDate(initialValues.startDate || null);
+    setEndDate(initialValues.endDate || null);
+  }, [initialValues, visible]);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
@@ -39,8 +48,13 @@ const TaskModal = ({ visible, onClose, onSubmit, teamMembers = [], initialValues
 
   const getAssignedUserName = () => {
     if (!assignedTo) return 'Görev Atanacak Kişi Seç';
-    const member = teamMembers.find(m => m.id === assignedTo);
-    return member ? member.name : 'Görev Atanacak Kişi Seç';
+    // Eğer assignedTo obje ise
+    if (typeof assignedTo === 'object' && assignedTo !== null) {
+      return assignedTo.name || assignedTo.email || assignedTo._id || 'Görev Atanacak Kişi Seç';
+    }
+    // id ise teamMembers'dan bul
+    const member = teamMembers.find(m => m.id === assignedTo || m._id === assignedTo);
+    return member ? member.name : String(assignedTo);
   };
 
   return (
@@ -53,103 +67,119 @@ const TaskModal = ({ visible, onClose, onSubmit, teamMembers = [], initialValues
       <View style={styles.modalContainer}>
         <Surface style={styles.modalContent}>
           <ScrollView>
-            <Text style={styles.modalTitle}>Görev Ekle</Text>
+            <Text style={styles.modalTitle}>{readOnly ? 'Görev Detayı' : 'Görev Ekle'}</Text>
 
-            <TextInput
-              label="Görev Başlığı"
-              value={title}
-              onChangeText={setTitle}
-              mode="outlined"
-              style={styles.input}
-            />
-
-            <TextInput
-              label="Görev Açıklaması"
-              value={description}
-              onChangeText={setDescription}
-              mode="outlined"
-              multiline
-              numberOfLines={3}
-              style={styles.input}
-            />
-
-            {/* Ekip üyesi seçimi */}
-            <List.Section style={styles.memberSection}>
-              <List.Subheader>Görevi Atanacak Kişi</List.Subheader>
-              {teamMembers.map((member) => (
-                <List.Item
-                  key={member.id}
-                  title={member.name}
-                  description={member.email}
-                  onPress={() => setAssignedTo(member.id)}
-                  left={props => (
-                    <List.Icon
-                      {...props}
-                      icon={assignedTo === member.id ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"}
-                      color={assignedTo === member.id ? COLORS.primary : COLORS.gray}
-                    />
-                  )}
-                  style={[
-                    styles.memberItem,
-                    assignedTo === member.id && styles.selectedMemberItem
-                  ]}
+            {readOnly ? (
+              <>
+                <Text style={{fontWeight:'bold', fontSize:16, marginBottom:8}}>{title}</Text>
+                <Text style={{marginBottom:12, color:COLORS.gray}}>{description}</Text>
+                <Text style={{marginBottom:8}}>
+                  <Text style={{fontWeight:'bold'}}>Atanan:</Text> {getAssignedUserName()}
+                </Text>
+                <Text style={{marginBottom:8}}>
+                  <Text style={{fontWeight:'bold'}}>Başlangıç:</Text> {formatDate(startDate)}
+                </Text>
+                <Text style={{marginBottom:16}}>
+                  <Text style={{fontWeight:'bold'}}>Bitiş:</Text> {formatDate(endDate)}
+                </Text>
+              </>
+            ) : (
+              <>
+                <TextInput
+                  label="Görev Başlığı"
+                  value={title}
+                  onChangeText={setTitle}
+                  mode="outlined"
+                  style={styles.input}
                 />
-              ))}
-            </List.Section>
+                <TextInput
+                  label="Görev Açıklaması"
+                  value={description}
+                  onChangeText={setDescription}
+                  mode="outlined"
+                  multiline
+                  numberOfLines={3}
+                  style={styles.input}
+                />
+                {/* Ekip üyesi seçimi */}
+                <List.Section style={styles.memberSection}>
+                  <List.Subheader>Görevi Atanacak Kişi</List.Subheader>
+                  {teamMembers.map((member) => (
+                    <List.Item
+                      key={member.id}
+                      title={member.name}
+                      description={member.email}
+                      onPress={() => setAssignedTo(member.id)}
+                      left={props => (
+                        <List.Icon
+                          {...props}
+                          icon={assignedTo === member.id ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"}
+                          color={assignedTo === member.id ? COLORS.primary : COLORS.gray}
+                        />
+                      )}
+                      style={[
+                        styles.memberItem,
+                        assignedTo === member.id && styles.selectedMemberItem
+                      ]}
+                    />
+                  ))}
+                </List.Section>
 
-            <Button
-              mode="outlined"
-              onPress={() => setShowStartDatePicker(true)}
-              style={styles.dateButton}
-            >
-              {startDate ? `Başlangıç: ${formatDate(startDate)}` : 'Başlangıç Tarihi Seç'}
-            </Button>
+                <Button
+                  mode="outlined"
+                  onPress={() => setShowStartDatePicker(true)}
+                  style={styles.dateButton}
+                >
+                  {startDate ? `Başlangıç: ${formatDate(startDate)}` : 'Başlangıç Tarihi Seç'}
+                </Button>
 
-            <Button
-              mode="outlined"
-              onPress={() => setShowEndDatePicker(true)}
-              style={styles.dateButton}
-            >
-              {endDate ? `Bitiş: ${formatDate(endDate)}` : 'Bitiş Tarihi Seç'}
-            </Button>
+                <Button
+                  mode="outlined"
+                  onPress={() => setShowEndDatePicker(true)}
+                  style={styles.dateButton}
+                >
+                  {endDate ? `Bitiş: ${formatDate(endDate)}` : 'Bitiş Tarihi Seç'}
+                </Button>
 
-            <View style={styles.buttonContainer}>
-              <Button
-                mode="contained"
-                onPress={handleSubmit}
-                style={styles.button}
-                disabled={!title || !description || !assignedTo || !startDate || !endDate}
-              >
-                Ekle
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={onClose}
-                style={styles.button}
-              >
-                İptal
-              </Button>
-            </View>
+                <View style={styles.buttonContainer}>
+                  <Button
+                    mode="contained"
+                    onPress={handleSubmit}
+                    style={styles.button}
+                    disabled={!title || !description || !assignedTo || !startDate || !endDate}
+                  >
+                    Ekle
+                  </Button>
+                  <Button
+                    mode="outlined"
+                    onPress={onClose}
+                    style={styles.button}
+                  >
+                    İptal
+                  </Button>
+                </View>
 
-            <DateTimePickerModal
-              isVisible={showStartDatePicker}
-              mode="date"
-              onConfirm={(date) => {
-                setStartDate(date);
-                setShowStartDatePicker(false);
-              }}
-              onCancel={() => setShowStartDatePicker(false)}
-            />
+                <DateTimePickerModal
+                  isVisible={showStartDatePicker}
+                  mode="date"
+                  onConfirm={(date) => {
+                    setStartDate(date);
+                    setShowStartDatePicker(false);
+                  }}
+                  onCancel={() => setShowStartDatePicker(false)}
+                />
 
-            <DateTimePickerModal
-              isVisible={showEndDatePicker}
-              mode="date"
-              onConfirm={(date) => {
-                setEndDate(date);
-                setShowEndDatePicker(false);
-              }}
-              onCancel={() => setShowEndDatePicker(false)}
-            />
+                <DateTimePickerModal
+                  isVisible={showEndDatePicker}
+                  mode="date"
+                  onConfirm={(date) => {
+                    setEndDate(date);
+                    setShowEndDatePicker(false);
+                  }}
+                  onCancel={() => setShowEndDatePicker(false)}
+                />
+              </>
+            )}
           </ScrollView>
         </Surface>
       </View>

@@ -1,4 +1,6 @@
 import React, { useState, useCallback } from 'react';
+import { TouchableOpacity } from 'react-native';
+import TaskModal from '../components/TaskModal';
 import { StyleSheet, View, ScrollView, RefreshControl, Alert, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Surface, Text, Button, Chip, ActivityIndicator, List } from 'react-native-paper';
@@ -21,6 +23,8 @@ const ProjectDetailScreen = ({ route, navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const windowWidth = Dimensions.get('window').width;
+  const [showTaskDetail, setShowTaskDetail] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   const loadProjectData = async () => {
     try {
@@ -102,9 +106,18 @@ const ProjectDetailScreen = ({ route, navigation }) => {
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => null
+      headerRight: () => (
+        <Button
+          icon="pencil"
+          mode="text"
+          compact
+          onPress={() => navigation.navigate('EditProject', { projectId: project?._id })}
+        >
+          Düzenle
+        </Button>
+      )
     });
-  }, [navigation]);
+  }, [navigation, project]);
 
   if (loading) {
     return (
@@ -172,6 +185,16 @@ const ProjectDetailScreen = ({ route, navigation }) => {
       .catch(() => alert('Durum güncellenemedi!'))
   }
 
+  const handleBackStatus = (task) => {
+    const statusOrder = ['Yapılacak', 'Devam Etmekte', 'Test Edilecek', 'Tamamlandı'];
+    const currentIndex = statusOrder.indexOf(task.status);
+    if (currentIndex <= 0) return; // İlk durumdaysa geri gitmesin
+    const prevStatus = statusOrder[currentIndex - 1];
+    taskAPI.updateTaskStatus(project._id, task._id, prevStatus)
+      .then(() => loadProjectData())
+      .catch(() => alert('Durum geri alınamadı!'))
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView 
@@ -184,7 +207,9 @@ const ProjectDetailScreen = ({ route, navigation }) => {
         }
       >
         <Surface style={styles.headerCard}>
-          <Text style={styles.projectTitle}>{project.title}</Text>
+          <View style={{flexDirection:'row', alignItems:'center', justifyContent:'space-between'}}>
+  <Text style={styles.projectTitle}>{project.title}</Text>
+</View>
           <Chip 
             mode="flat"
             style={[styles.statusChip, { backgroundColor: COLORS.primary }]}
@@ -259,30 +284,70 @@ const ProjectDetailScreen = ({ route, navigation }) => {
                 </Text>
                 {boardTasks[status] && boardTasks[status].length > 0 ? (
                   boardTasks[status].map(item => (
-                    <Surface key={item._id} style={{ marginBottom: 12, borderRadius: 8, elevation: 2, backgroundColor: COLORS.white }}>
-                      <View style={{ padding: 12 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: 15 }}>{item.title}</Text>
-                        <Text style={{ color: COLORS.textLight, fontSize: 13, marginVertical: 2 }}>{item.description}</Text>
-                        <Text style={{ color: COLORS.gray, fontSize: 12 }}>Atanan: {item.assignedTo?.name || 'Bilinmiyor'}</Text>
-                        <Text style={{ color: COLORS.gray, fontSize: 12 }}>
-                          Tarih: {item.startDate ? new Date(item.startDate).toLocaleDateString('tr-TR') : '-'} - {item.endDate ? new Date(item.endDate).toLocaleDateString('tr-TR') : '-'}
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                          <Chip
-                            mode="flat"
-                            style={[styles.taskStatusChip, { backgroundColor: TASK_STATUS_COLORS[item.status] || COLORS.primary }]}
-                          >
-                            {item.status}
-                          </Chip>
-                          <Button compact onPress={() => handleAdvanceStatus(item)} style={{ marginLeft: 8 }}>
-                            Durumu İlerle
-                          </Button>
+                    <Surface
+                      key={item._id}
+                      style={{ marginBottom: 12, borderRadius: 8, elevation: 2, backgroundColor: COLORS.white }}
+                    >
+                      <TouchableOpacity onPress={() => {
+                        setSelectedTask(item);
+                        setShowTaskDetail(true);
+                      }}>
+                        <View style={{ padding: 12 }}>
+                          <Text style={{ fontWeight: 'bold', fontSize: 15 }}>{item.title}</Text>
+                          <Text style={{ color: COLORS.textLight, fontSize: 13, marginVertical: 2 }}>{item.description}</Text>
+                          <Text style={{ color: COLORS.gray, fontSize: 12 }}>Atanan: {item.assignedTo?.name || 'Bilinmiyor'}</Text>
+                          <Text style={{ color: COLORS.gray, fontSize: 12 }}>
+                            Tarih: {(() => {
+                              const format = (d) => {
+                                if (!d || (typeof d === 'string' && d.trim() === '')) return '-';
+                                const dateObj = d instanceof Date ? d : new Date(d);
+                                return isNaN(dateObj.getTime()) ? '-' : dateObj.toLocaleDateString('tr-TR');
+                              };
+                              return `${format(item.startDate)} - ${format(item.endDate)}`;
+                            })()}
+                          </Text>
+                           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                            {/* SADECE GÖREV DURUM BUTONLARI */}
+                            {(() => {
+                              const statusOrder = ['Yapılacak', 'Devam Etmekte', 'Test Edilecek', 'Tamamlandı'];
+                              const idx = statusOrder.indexOf(item.status);
+                              return (
+                                <>
+                                  {idx > 0 && idx < statusOrder.length && (
+                                    <Button
+                                      mode="outlined"
+                                      compact
+                                      style={{ 
+                                        marginHorizontal: 2, 
+                                        borderColor: TASK_STATUS_COLORS[item.status] || COLORS.primary,
+                                        color: TASK_STATUS_COLORS[item.status] || COLORS.primary
+                                      }}
+                                      labelStyle={{ color: TASK_STATUS_COLORS[item.status] || COLORS.primary }}
+                                      onPress={() => handleBackStatus(item)}
+                                    >Önceki Durum</Button>
+                                  )}
+                                  {idx > -1 && idx < statusOrder.length - 1 && (
+                                    <Button
+                                      mode="contained"
+                                      compact
+                                      style={{ 
+                                        marginHorizontal: 2, 
+                                        backgroundColor: TASK_STATUS_COLORS[item.status] || COLORS.primary
+                                      }}
+                                      labelStyle={{ color: '#fff' }}
+                                      onPress={() => handleAdvanceStatus(item)}
+                                    >İlerle</Button>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </View>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                     </Surface>
                   ))
                 ) : (
-                  <Text style={{ color: COLORS.gray, fontStyle: 'italic' }}>Görev yok</Text>
+                  <Text style={styles.emptyText}>Henüz görev yok</Text>
                 )}
               </View>
             ))}
@@ -290,9 +355,18 @@ const ProjectDetailScreen = ({ route, navigation }) => {
         </Surface>
 
       </ScrollView>
+      {/* Görev Detay Modalı */}
+      <TaskModal
+        visible={showTaskDetail}
+        onClose={() => setShowTaskDetail(false)}
+        initialValues={selectedTask || {}}
+        teamMembers={project.team || []}
+        onSubmit={() => setShowTaskDetail(false)}
+        readOnly={true}
+      />
     </View>
   );
-}
+};
 
 
 const styles = StyleSheet.create({

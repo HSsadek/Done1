@@ -12,28 +12,40 @@ import { IconButton } from 'react-native-paper';
 const ProjectsScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
+  // Storage helper
+  const storage = require('../utils/storage').storage;
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchProjects = async () => {
     try {
+      // Kullanıcıyı storage'dan çek
+      let currentUser = user;
+      if (!currentUser || !currentUser._id) {
+        currentUser = await storage.getUserData();
+        setUser(currentUser);
+      }
+      if (!currentUser || !currentUser._id) {
+        console.log('Kullanıcı bulunamadı, projeler filtrelenemedi');
+        setProjects([]);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
       const response = await projectAPI.getAllProjects();
       console.log('Projeler API response:', response.data);
-      console.log('Projeler API response status:', response.status);
-      console.log('Projeler API response headers:', response.headers);
       // Sadece kullanıcının sahibi olduğu veya ekip üyesi olduğu projeleri filtrele
       const filtered = response.data.filter(project => {
-        if (!user || !user._id) return false;
-        // Sahibi mi? (owner nesne veya string olabilir)
-        if (project.owner && (project.owner === user._id || project.owner._id === user._id)) return true;
-        // Ekip üyesi mi? (team dizisi string veya nesne olabilir)
+        const userId = String(currentUser._id);
+        // Sahibi mi?
+        const ownerId = project.owner && (project.owner._id || project.owner);
+        if (String(ownerId) === userId) return true;
+        // Ekip üyesi mi?
         if (Array.isArray(project.team)) {
-          // team dizisi string id veya nesne olabilir
           return project.team.some(member => {
-            if (typeof member === 'string') return member === user._id;
-            if (member && member._id) return member._id === user._id;
-            return false;
+            const memberId = member && (member._id || member);
+            return String(memberId) === userId;
           });
         }
         return false;
@@ -43,6 +55,7 @@ const ProjectsScreen = ({ navigation }) => {
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
       setProjects(sortedProjects);
+      console.log('Kullanıcı ID:', currentUser._id);
       console.log('Filtrelenmiş ve sıralanmış projeler:', sortedProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -75,15 +88,20 @@ const ProjectsScreen = ({ navigation }) => {
     const fetchUser = async () => {
       try {
         setUserLoading(true);
-        const response = await require('../services/api').authAPI.getProfile();
-        console.log('Kullanıcı profili API response:', response.data);
-        setUser(response.data);
+        // Önce storage'dan dene
+        let userData = await storage.getUserData();
+        if (!userData || !userData._id) {
+          // API'den çek
+          const response = await require('../services/api').authAPI.getProfile();
+          userData = response.data;
+          await storage.setUserData(userData);
+        }
+        setUser(userData);
       } catch (err) {
         setUser(null);
         console.error('Kullanıcı profili alınamadı, hata:', err);
         // Hata durumunda storage temizle ve Login ekranına yönlendir
-        const { clearAll } = require('../utils/storage').storage;
-        await clearAll();
+        if (storage.clearAll) await storage.clearAll();
         if (navigation && navigation.reset) {
           navigation.reset({
             index: 0,
@@ -97,23 +115,6 @@ const ProjectsScreen = ({ navigation }) => {
     fetchUser();
   }, []);
 
-  // Eğer user null ise storage'dan tekrar çek
-  React.useEffect(() => {
-    if (!user) {
-      (async () => {
-        try {
-          const { getItem } = require('../utils/storage').storage;
-          const userStr = await getItem('user');
-          if (userStr) {
-            const userObj = JSON.parse(userStr);
-            setUser(userObj);
-          }
-        } catch (e) {
-          // ignore
-        }
-      })();
-    }
-  }, [user]);
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
@@ -134,10 +135,16 @@ const ProjectsScreen = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      if (user && user._id) {
-        fetchProjects();
-      }
-    }, [user])
+      const refreshUserAndProjects = async () => {
+        const storage = require('../utils/storage').storage;
+        const latestUser = await storage.getUserData();
+        setUser(latestUser);
+        if (latestUser && latestUser._id) {
+          fetchProjects();
+        }
+      };
+      refreshUserAndProjects();
+    }, [])
   );
 
   if (loading) {
