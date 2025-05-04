@@ -162,17 +162,19 @@ exports.resetPassword = async (req, res) => {
 // Search users
 exports.searchUsers = async (req, res) => {
     try {
-        const searchQuery = req.query.search;
+        // Hem 'query' hem 'search' parametresini destekle
+        const searchQuery = req.query.query || req.query.search;
         if (!searchQuery) {
             return res.status(400).json({ message: 'Search query is required' });
         }
 
         const users = await User.find({
             $or: [
+                { username: { $regex: searchQuery, $options: 'i' } },
                 { email: { $regex: searchQuery, $options: 'i' } },
                 { name: { $regex: searchQuery, $options: 'i' } }
             ]
-        }).select('name email');
+        }).select('username name email');
 
         res.json(users);
     } catch (error) {

@@ -1,5 +1,46 @@
 /* Modern Proje Yönetim Sistemi Stil Dosyası */
 
+.profile-photo {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.user-info {
+  line-height: 1.1;
+}
+
+.autocomplete-suggestions {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ccc;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 9999;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.autocomplete-suggestion {
+  padding: 6px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.autocomplete-suggestion:hover {
+  background: #f0f0f0;
+}
+
+.team-member-input-parent {
+  position: relative;
+}
+
+
+
 /* Genel Stiller ve Değişkenler */
 :root {
     --primary-color: #4361ee;
@@ -369,6 +410,49 @@ body {
     background-color: var(--primary-color);
     color: white;
     transform: scale(1.1);
+}
+
+.autocomplete-suggestions {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #e0e6ed;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 9999;
+  width: 100%;
+  box-shadow: 0 4px 16px rgba(60,72,88,0.08);
+  border-radius: 10px;
+  padding: 4px 0;
+}
+
+.autocomplete-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: transparent;
+  border-radius: 6px;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+
+.autocomplete-suggestion:hover {
+  background: #f0f4ff;
+}
+
+.autocomplete-suggestion .bi-person-circle {
+  font-size: 1.7rem;
+  color: #3b82f6;
+}
+
+.autocomplete-suggestion .fw-semibold {
+  font-weight: 600;
+  color: #222;
+}
+
+.autocomplete-suggestion .text-muted {
+  color: #6c757d;
+  font-size: 0.97em;
 }
 
 /* Profil Sekmeler */

@@ -56,13 +56,23 @@
                             <input type="text" class="form-control" id="projectName" required>
                         </div>
                         <div class="mb-3">
-                            <label for="projectDescription" class="form-label">Açıklama</label>
-                            <textarea class="form-control" id="projectDescription" rows="3"></textarea>
-                        </div>
+    <label for="projectDescription" class="form-label">Açıklama</label>
+    <textarea class="form-control" id="projectDescription" rows="3"></textarea>
+</div>
+<div class="row">
+    <div class="mb-3 col-md-6">
+        <label for="projectStartDate" class="form-label">Proje Başlangıç Tarihi</label>
+        <input type="date" class="form-control" id="projectStartDate">
+    </div>
+    <div class="mb-3 col-md-6">
+        <label for="projectEndDate" class="form-label">Proje Bitiş Tarihi</label>
+        <input type="date" class="form-control" id="projectEndDate">
+    </div>
+</div>
                         <div class="mb-3">
                             <label class="form-label">Ekip Üyeleri</label>
-                            <div class="input-group mb-2 position-relative">
-                                <input type="text" class="form-control" id="teamMemberInput" placeholder="E-posta veya kullanıcı adı ile ara" autocomplete="off">
+                            <div class="mb-3 team-member-input-parent">
+                                <input type="text" class="form-control team-member-input" id="teamMemberInput" placeholder="E-posta veya kullanıcı adı ile ara" autocomplete="off">
                                 <ul class="list-group position-absolute w-100" id="teamMemberSuggestions"></ul>
                             </div>
                             <div id="teamMembersList" class="d-flex flex-wrap gap-2 mt-2">
@@ -164,7 +174,28 @@
         </div>
     </template>
 
+    <!-- Proje Detay Modalı -->
+    <div class="modal fade" id="projectDetailModal" tabindex="-1" aria-labelledby="projectDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="projectDetailTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="projectDetailDescription"></p>
+                    <div>
+                        <span>Toplam Görev: <span id="projectDetailTaskCount"></span></span><br>
+                        <span>Tamamlanan Görev: <span id="projectDetailCompletedTaskCount"></span></span><br>
+                        <div id="projectDetailTeam"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/autocomplete.js"></script>
 </body>
 </html>

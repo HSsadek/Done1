@@ -2,12 +2,11 @@
 
 // API URL'leri (Backend entegrasyonu için)
 // Mobil erişim için IP adresini kullanır.
-const LOCAL_IP = window.LOCAL_IP || '10.14.13.173'; // Bilgisayarınızın gerçek IP adresi
 const API_URL = {
-    projects: `http://${LOCAL_IP}:5000/api/projects`,
-    tasks: `http://${LOCAL_IP}:5000/api/tasks`,
-    profile: `http://${LOCAL_IP}:5000/api/profile`,
-    activities: `http://${LOCAL_IP}:5000/api/activities`
+    projects: 'http://localhost:5000/api/projects',
+    tasks: 'http://localhost:5000/api/tasks',
+    profile: 'http://localhost:5000/api/profile',
+    activities: 'http://localhost:5000/api/activities'
 };
 
 // Proje ve görev verileri
@@ -38,13 +37,86 @@ function setupEventListeners() {
     document.getElementById('saveTaskBtn').addEventListener('click', saveTask);
     
     // Görev düzenleme butonu
-    document.getElementById('editTaskBtn').addEventListener('click', () => {
-        // Görev düzenleme işlemleri burada yapılacak
-        // Şimdilik sadece modal'ı kapatıyoruz
-        const modal = bootstrap.Modal.getInstance(document.getElementById('taskDetailModal'));
-        modal.hide();
-    });
-    
+    // Görev ekleme panelinde ekip üyesi select'ini doldur
+function fillAssigneeSelects() {
+    const team = (currentProject && currentProject.teamMembers) ? currentProject.teamMembers : [];
+    // Ekleme paneli
+    const addAssigneeSelect = document.getElementById('taskAssignee');
+    if (addAssigneeSelect) {
+        addAssigneeSelect.innerHTML = '<option value="">Seçiniz</option>';
+        team.forEach(member => {
+            const option = document.createElement('option');
+            option.value = member;
+            option.textContent = member;
+            addAssigneeSelect.appendChild(option);
+        });
+    }
+}
+
+// Proje detayları yüklendiğinde select'leri doldur
+function afterProjectLoaded() {
+    fillAssigneeSelects();
+}
+
+// loadProjectDetails çağrısında sonra afterProjectLoaded fonksiyonunu çağır
+// Bunu loadProjectDetails fonksiyonunun en sonunda ekleyeceğiz
+
+// Görev düzenleme paneli açılırken ekip üyesi select'ini doldur
+
+    // Seçili görevin ID'sini detay modalinden al
+    const taskTitle = document.getElementById('detailTaskTitle').textContent;
+    const task = tasks.find(t => t.title === taskTitle);
+    if (!task) return;
+    // Formu doldur
+    document.getElementById('editTaskId').value = task.id;
+    document.getElementById('editTaskTitle').value = task.title;
+    document.getElementById('editTaskDescription').value = task.description || '';
+    document.getElementById('editTaskStartDate').value = task.startDate ? task.startDate.substring(0,10) : '';
+    document.getElementById('editTaskEndDate').value = task.endDate ? task.endDate.substring(0,10) : '';
+    // Ekip üyelerini select olarak doldur
+const assigneeSelect = document.getElementById('editTaskAssignee');
+assigneeSelect.innerHTML = '<option value="">Atanmamış</option>';
+(currentProject.teamMembers || []).forEach(member => {
+    const option = document.createElement('option');
+    option.value = member;
+    option.textContent = member;
+    assigneeSelect.appendChild(option);
+});
+assigneeSelect.value = task.assignee || '';
+
+    document.getElementById('editTaskStatus').value = task.status || 'notStarted';
+    // Detay modalını kapat, düzenleme modalını aç
+    const detailModal = bootstrap.Modal.getInstance(document.getElementById('taskDetailModal'));
+    detailModal.hide();
+    const editModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
+    editModal.show();
+    // Düzenleme panelinde kaydet butonu
+    const saveEditTaskBtn = document.getElementById('saveEditTaskBtn');
+    if (saveEditTaskBtn) {
+        saveEditTaskBtn.addEventListener('click', () => {
+            const id = document.getElementById('editTaskId').value;
+            const updatedTask = {
+                id: id,
+                title: document.getElementById('editTaskTitle').value,
+                description: document.getElementById('editTaskDescription').value,
+                startDate: document.getElementById('editTaskStartDate').value,
+                endDate: document.getElementById('editTaskEndDate').value,
+                assignee: document.getElementById('editTaskAssignee').value,
+                status: document.getElementById('editTaskStatus').value
+            };
+            // Görevler dizisinde ilgili görevi güncelle
+            const idx = tasks.findIndex(t => (t.id || t._id) == id);
+            if (idx !== -1) {
+                tasks[idx] = { ...tasks[idx], ...updatedTask };
+                renderTasks();
+                showAlert('Görev başarıyla güncellendi!', 'success');
+            }
+            // Modalı kapat
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('editTaskModal'));
+            editModal.hide();
+        });
+    }
+
     // Proje düzenleme butonu
     document.getElementById('editProjectButton').addEventListener('click', openEditProjectModal);
     
@@ -68,6 +140,8 @@ async function loadProjectDetails(projectId) {
         });
         if (!response.ok) throw new Error('Proje detayları getirilemedi!');
         const data = await response.json();
+        // DEBUG: API'den gelen görevleri konsola yazdır
+        console.log('API\'den gelen görevler:', data.tasks);
         // API'den gelen veriyi currentProject formatına dönüştür
         currentProject = {
             id: data._id || data.id,
@@ -77,21 +151,12 @@ async function loadProjectDetails(projectId) {
             endDate: data.endDate,
             owner: data.owner || null,
             teamMembers: data.teamMembers || data.team || [],
-            tasks: Array.isArray(data.tasks) ? data.tasks.map(task => {
-                // Eğer task objesinde title yoksa, alt objeden al
-                if (typeof task === 'object' && task !== null) {
-                    return {
-                        id: task._id || task.id,
-                        title: task.title || task.name || '',
-                        description: task.description || '',
-                        startDate: task.startDate,
-                        endDate: task.endDate,
-                        assignee: (typeof task.assignee === 'object' && task.assignee !== null) ? (task.assignee.name || task.assignee.email || '') : (task.assignee || ''),
-                        status: task.status || 'notStarted'
-                    };
-                }
-                return task;
-            }) : []
+            tasks: Array.isArray(data.tasks) ? data.tasks.map(task => ({
+                ...task,
+                assignee: task.assignedTo ? task.assignedTo.name : '',
+                startDate: task.startDate || task.createdAt || '',
+                endDate: task.endDate || ''
+            })) : []
         };
 
         // Proje detaylarını görüntüle
@@ -101,6 +166,7 @@ async function loadProjectDetails(projectId) {
         renderTasks();
         // Ekip üyelerini görev atama seçeneğine ekle
         updateTaskAssigneeOptions();
+        afterProjectLoaded();
     } catch (error) {
         console.error('Proje detayları yüklenirken hata oluştu:', error);
         showAlert('Proje detayları yüklenirken bir hata oluştu.', 'danger');
@@ -196,6 +262,28 @@ function renderTasks() {
     document.querySelectorAll('.kanban-column-content').forEach(column => {
         column.innerHTML = '';
     });
+    // Görevleri durumlarına göre ilgili sütunlara ekle
+    tasks.forEach(task => {
+        let status = (task.status || 'notStarted').toString().toLowerCase().trim();
+        if (status === 'yapılacak' || status === 'yapilacak') status = 'notStarted';
+        status = status
+            .replace(/\s+/g, '')
+            .replace(/[İIı]/g, 'i')
+            .replace(/^inprogress$/i, 'inProgress')
+            .replace(/^notstarted$/i, 'notStarted')
+            .replace(/^done$/i, 'done')
+            .replace(/^test$/i, 'test');
+        const column = document.querySelector(`.kanban-column-content[data-status="${status}"]`);
+        if (column) {
+            const taskCard = createTaskCard(task);
+            column.appendChild(taskCard);
+        }
+    });
+}
+    // Tüm sütunları temizle
+    document.querySelectorAll('.kanban-column-content').forEach(column => {
+        column.innerHTML = '';
+    });
     
     // Görevleri durumlarına göre ilgili sütunlara ekle
     tasks.forEach(task => {
@@ -220,39 +308,65 @@ function renderTasks() {
             column.appendChild(taskCard);
         }
     });
+
+// Yardımcı fonksiyon: Her türlü (string, Date objesi, null, undefined, geçersiz) tarihi düzgün formatlar
+function formatDateTR(date) {
+    if (!date) return null;
+    let d = date;
+    if (typeof d === 'string' || typeof d === 'number') {
+        d = new Date(d);
+    }
+    if (d instanceof Date && !isNaN(d)) {
+        return d.toLocaleDateString('tr-TR');
+    }
+    return null;
 }
 
 // Görev kartı oluştur
 function createTaskCard(task) {
     const template = document.getElementById('taskCardTemplate');
     const taskCard = document.importNode(template.content, true).querySelector('.task-card');
-    
     // Görev bilgilerini karta ekle
-    taskCard.setAttribute('data-task-id', task.id);
-    taskCard.querySelector('.task-card-title').textContent = task.title;
+    taskCard.setAttribute('data-task-id', task.id || task._id || '');
+    taskCard.querySelector('.task-card-title').textContent = task.title || '';
     taskCard.querySelector('.task-card-description').textContent = task.description || 'Açıklama yok';
-    taskCard.querySelector('.task-card-assignee').textContent = task.assignee || 'Atanmamış';
-    
-    // Tarih bilgisini formatlayarak ekle
-    let dateText = '';
-    if (task.endDate) {
-        const endDate = new Date(task.endDate);
-        dateText = `Bitiş: ${endDate.toLocaleDateString('tr-TR')}`;
-    }
-    taskCard.querySelector('.task-card-date').textContent = dateText;
-    
-    // Görev detaylarını görüntülemek için tıklama olayı ekle
-    taskCard.addEventListener('click', (e) => {
-        // Sürükleme sırasında tıklama olayını engelle
-        if (!taskCard.classList.contains('dragging')) {
-            showTaskDetails(task);
+    // Atanan kişi robust göster
+    let assignee = (typeof task.assignee === 'string') ? task.assignee : (task.assignee && task.assignee.name) ? task.assignee.name : '';
+    if (!assignee) assignee = 'Atanmamış';
+    taskCard.querySelector('.task-card-assignee').textContent = assignee;
+    // Tarihleri robust göster
+    let start = task.startDate || task.createdAt || '';
+    let end = task.endDate || '';
+    const startText = start ? formatDateTR(start) : null;
+    const endText = end ? formatDateTR(end) : null;
         }
     });
-    
     // Sürükle-bırak için olaylar ekle
     taskCard.addEventListener('dragstart', handleDragStart);
     taskCard.addEventListener('dragend', handleDragEnd);
-    
+    return taskCard;
+    let dateText = '';
+    if (startText && endText) {
+        dateText = `Başlangıç: ${startText} | Bitiş: ${endText}`;
+    } else if (startText) {
+        dateText = `Başlangıç: ${startText}`;
+    } else if (endText) {
+        dateText = `Bitiş: ${endText}`;
+    } else {
+        dateText = 'Tarih yok';
+    }
+    taskCard.querySelector('.task-card-date').textContent = dateText;
+    // Görev detaylarını görüntülemek için tıklama olayı ekle
+    taskCard.addEventListener('click', (e) => {
+        if (!taskCard.classList.contains('dragging')) {
+            const id = taskCard.getAttribute('data-task-id');
+            const freshTask = tasks.find(t => (t.id || t._id) == id);
+            showTaskDetails(freshTask || task);
+        }
+    });
+    // Sürükle-bırak için olaylar ekle
+    taskCard.addEventListener('dragstart', handleDragStart);
+    taskCard.addEventListener('dragend', handleDragEnd);
     return taskCard;
 }
 
@@ -260,7 +374,6 @@ function createTaskCard(task) {
 function showTaskDetails(task) {
     document.getElementById('detailTaskTitle').textContent = task.title;
     document.getElementById('detailTaskDescription').textContent = task.description || 'Açıklama yok';
-    
     // Tarihleri formatlayarak göster
     const startDateElem = document.getElementById('detailTaskStartDate');
     const endDateElem = document.getElementById('detailTaskEndDate');
@@ -479,7 +592,10 @@ function addTeamMemberField(memberName = '') {
     // Ekip üyesi adını ayarla
     const input = teamMemberItem.querySelector('.team-member-input');
     input.value = memberName;
-    
+    // Autocomplete aktif et
+    if (typeof onNewTeamMemberInput === 'function') {
+        onNewTeamMemberInput(input);
+    }
     // Silme butonuna event listener ekle
     const removeButton = teamMemberItem.querySelector('.remove-team-member');
     removeButton.addEventListener('click', function() {

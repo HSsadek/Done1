@@ -12,14 +12,49 @@ window.addEventListener('pageshow', checkAuth);
 
 // API URL'leri (Backend entegrasyonu için)
 // Mobil erişim için IP adresini kullanır.
-const LOCAL_IP = window.LOCAL_IP || '10.14.13.173'; // Bilgisayarınızın gerçek IP adresi
 const API_URL = {
-    projects: `http://${LOCAL_IP}:5000/api/projects`,
-    tasks: `http://${LOCAL_IP}:5000/api/tasks`
+    projects: 'http://localhost:5000/api/projects',
+    tasks: 'http://localhost:5000/api/tasks'
 };
 
 // DOM yüklendikten sonra çalışacak fonksiyonlar
 document.addEventListener('DOMContentLoaded', () => {
+    // Autocomplete seçiminden sonra kullanıcıyı ekibe ekle
+    const teamMemberInput = document.getElementById('teamMemberInput');
+    const teamMembersList = document.getElementById('teamMembersList');
+    let selectedTeamMembers = [];
+
+    if (teamMemberInput) {
+        teamMemberInput.addEventListener('change', function() {
+            const username = this.value.trim();
+            if (username && !selectedTeamMembers.includes(username)) {
+                selectedTeamMembers.push(username);
+                const tag = document.createElement('div');
+                tag.className = 'team-member-tag badge bg-primary text-white d-flex align-items-center';
+                tag.setAttribute('data-member', username);
+                tag.innerHTML = `${username} <span class="ms-2" style="cursor:pointer;" title="Kaldır">&times;</span>`;
+                tag.querySelector('span').onclick = function() {
+                    selectedTeamMembers = selectedTeamMembers.filter(u => u !== username);
+                    tag.remove();
+                    updateTaskAssigneeOptions();
+                };
+                teamMembersList.appendChild(tag);
+                this.value = '';
+                updateTaskAssigneeOptions();
+            }
+        });
+    }
+
+    // Proje kaydederken etiketlerden ekip üyelerini topla
+    const saveProjectBtn = document.getElementById('saveProjectBtn');
+    if (saveProjectBtn) {
+        saveProjectBtn.addEventListener('click', function() {
+            const teamMemberTags = document.querySelectorAll('#teamMembersList .team-member-tag');
+            const teamMembers = Array.from(teamMemberTags).map(tag => tag.getAttribute('data-member'));
+            // ...burada mevcut proje kaydetme kodunda teamMembers dizisini kullanmalısın
+        });
+    }
+
     // Projeleri yükle
     loadProjects();
     
@@ -56,12 +91,16 @@ function setupEventListeners() {
                 if (!res.ok) throw new Error('Kullanıcılar alınamadı');
                 let users = await res.json();
                 users = users.sort((a, b) => a.name.localeCompare(b.name));
+                // Her aramada önce eski hata mesajını temizle
+                const prevError = suggestionsBox.querySelector('.text-danger');
+                if (prevError) prevError.remove();
                 if (users.length === 0) {
                     suggestionsBox.innerHTML = '<li class="list-group-item">Kullanıcı bulunamadı</li>';
+                    suggestionsBox.style.display = 'block';
                 } else {
-                    suggestionsBox.innerHTML = users.map(u => `<li class="list-group-item list-group-item-action" data-email="${u.email}" data-name="${u.name}">${u.name} &lt;${u.email}&gt;</li>`).join('');
+                    suggestionsBox.innerHTML = users.map(u => `<li class="list-group-item list-group-item-action" data-email="${u.email}" data-name="${u.name}">${u.name}</li>`).join('');
+                    suggestionsBox.style.display = 'block';
                 }
-                suggestionsBox.style.display = 'block';
             } catch (err) {
                 suggestionsBox.innerHTML = '<li class="list-group-item text-danger">Hata: Kullanıcılar alınamadı</li>';
                 suggestionsBox.style.display = 'block';
@@ -78,6 +117,9 @@ function setupEventListeners() {
             teamMemberInput.value = '';
             suggestionsBox.style.display = 'none';
             suggestionsBox.innerHTML = '';
+            // Hata mesajı varsa temizle
+            const errorMsg = suggestionsBox.querySelector('.text-danger');
+            if (errorMsg) errorMsg.remove();
         }
     });
 
@@ -111,38 +153,34 @@ function setupEventListeners() {
 
 // Projeleri yükle (sadece giriş yapan kullanıcıya ait gerçek projeler)
 async function loadProjects() {
+    console.log('loadProjects() çağrıldı');
     try {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            console.log('Token yok, kullanıcı giriş yapmamış.');
+            return;
+        }
         const response = await fetch(API_URL.projects, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('Projeler getirilemedi');
         const allProjects = await response.json();
+        console.log('APIden dönen tüm projeler:', allProjects);
         // Kullanıcının sahibi olduğu veya ekipte olduğu projeleri filtrele
         const userId = await getUserIdFromProfile(token);
+        console.log('Kullanıcı ID:', userId);
         console.log('allProjects', allProjects);
-console.log('userId', userId);
-const userProjects = allProjects.filter(p => {
-    // Bazı backendlerde owner._id yerine owner olabilir
-    const ownerId = p.owner && (p.owner._id || p.owner);
-    // Ekip üyeleri bazen team veya teamMembers olabilir
-    const teamArr = Array.isArray(p.team) ? p.team : (Array.isArray(p.teamMembers) ? p.teamMembers : []);
-    return String(ownerId) === String(userId) || teamArr.some(t => String(t._id || t) === String(userId));
-});
-console.log('userProjects (filtered)', userProjects);
-        // Proje kartına uygun şekilde dönüştür
-        const projects = userProjects.map(p => ({
-            id: p._id,
-            name: p.title,
-            description: p.description,
-            startDate: p.startDate,
-            createdAt: p.createdAt,
-            taskCount: p.tasks ? p.tasks.length : 0,
-            completedTaskCount: p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0,
-            teamMembers: Array.isArray(p.teamMembers) && p.teamMembers.length > 0 ? p.teamMembers : (Array.isArray(p.team) ? p.team : [])
-        }));
-        renderProjects(projects);
+        console.log('userId', userId);
+        const userProjects = allProjects.filter(p => p.owner && p.owner._id === userId || (p.team && p.team.some(t => t._id === userId)));
+// Proje kartına uygun şekilde dönüştür (profile.js ile aynı)
+const projects = userProjects.map(p => ({
+    id: p._id,
+    name: p.title,
+    description: p.description,
+    taskCount: p.tasks ? p.tasks.length : 0,
+    completedTaskCount: p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0
+}));
+renderProjects(projects);
     } catch (error) {
         console.error('Projeler yüklenirken hata oluştu:', error);
         showAlert('Projeler yüklenirken bir hata oluştu.', 'danger');
@@ -282,19 +320,28 @@ async function saveProject() {
     const projectDescription = document.getElementById('projectDescription').value.trim();
     
     // Ekip üyelerini al
+    // Sadece kullanıcı _id'lerini topla
     const teamMemberTags = document.querySelectorAll('#teamMembersList .team-member-tag');
-    const teamMembers = Array.from(teamMemberTags).map(tag => tag.getAttribute('data-member'));
+    const teamMembers = Array.from(teamMemberTags)
+        .map(tag => tag.getAttribute('data-id'))
+        .filter(Boolean); // Sadece id'si olanları al
     
     // Görevleri al
     const taskItems = document.querySelectorAll('#tasksList .task-item');
+    // Görevleri, backend'e uygun şekilde sadece frontend'de tutacağız. Görevler proje ile birlikte gönderilmeyecek.
     const tasks = Array.from(taskItems).map(item => {
+        const assigneeSelect = item.querySelector('.task-assignee');
+        const selectedOption = assigneeSelect.options[assigneeSelect.selectedIndex];
+        let assignedTo = '';
+        if (selectedOption) {
+            const id = selectedOption.getAttribute('data-id');
+            if (id) assignedTo = id;
+        }
         return {
             title: item.querySelector('.task-title').value,
             description: item.querySelector('.task-description').value,
-            startDate: item.querySelector('.task-start-date').value,
-            endDate: item.querySelector('.task-end-date').value,
-            assignee: item.querySelector('.task-assignee').value,
-            status: 'notStarted' // Yeni görevler her zaman 'Not Started' durumunda başlar
+            dueDate: item.querySelector('.task-end-date').value,
+            assignedTo: assignedTo
         };
     });
     
@@ -304,38 +351,64 @@ async function saveProject() {
         return;
     }
     
-    // Yeni proje objesi oluştur
+    // Formdan tarihleri al
+    const projectStartDate = document.getElementById('projectStartDate').value;
+    const projectEndDate = document.getElementById('projectEndDate').value;
+
+    // Backend ile uyumlu yeni proje objesi oluştur
     const newProject = {
-        id: `project-${Date.now()}`,
-        name: projectName,
+        title: projectName,
         description: projectDescription,
-        teamMembers: teamMembers,
-        tasks: tasks,
-        taskCount: tasks.length,
-        completedTaskCount: 0
+        startDate: projectStartDate,
+        endDate: projectEndDate,
+        team: teamMembers.map(member => ({ _id: member }))
     };
-    
+
     try {
-        // Gerçek uygulamada burada API çağrısı yapılacak
-        // const response = await fetch(API_URL.projects, {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json'
-        //     },
-        //     body: JSON.stringify(newProject)
-        // });
-        // const savedProject = await response.json();
-        
-        // Başarılı kayıt sonrası sayfayı yenile
-        showAlert('Proje başarıyla oluşturuldu!', 'success');
-        
-        // Modal'ı kapat
-        const modal = bootstrap.Modal.getInstance(document.getElementById('newProjectModal'));
-        modal.hide();
-        
-        // Formu temizle
-        document.getElementById('newProjectForm').reset();
-        document.getElementById('teamMembersList').innerHTML = '';
+        // Gerçek API'ye POST isteği gönder
+        const token = localStorage.getItem('token');
+        const response = await fetch(API_URL.projects, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(newProject)
+        });
+        if (response.ok) {
+            const createdProject = await response.json();
+            // Proje oluşturulduktan sonra görevleri sırayla ekle
+            for (const task of tasks) {
+                if (task.title && task.assignedTo) {
+                    await fetch(API_URL.tasks, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            title: task.title,
+                            description: task.description,
+                            assignedTo: task.assignedTo,
+                            project: createdProject._id,
+                            dueDate: task.dueDate
+                        })
+                    });
+                }
+            }
+            showAlert('Proje ve görevler başarıyla oluşturuldu!', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newProjectModal'));
+            modal.hide();
+            // Formu temizle
+            document.getElementById('newProjectForm').reset();
+            document.getElementById('teamMembersList').innerHTML = '';
+            document.getElementById('tasksList').innerHTML = '';
+            // Projeleri yeniden yükle
+            loadProjects();
+        } else {
+            console.error('Proje kaydedilirken hata oluştu:', response);
+            showAlert('Proje kaydedilirken bir hata oluştu.', 'danger');
+        }
         document.getElementById('tasksList').innerHTML = '';
         
         // Projeleri yeniden yükle
@@ -432,6 +505,7 @@ function addTaskForm() {
     // Görev silme butonuna event listener ekle
     taskItem.querySelector('.remove-task').addEventListener('click', function() {
         this.closest('.task-item').remove();
+        updateTaskAssigneeOptions();
     });
     
     // Görev atama seçeneklerini güncelle
@@ -448,6 +522,27 @@ function addTaskForm() {
     // Görevi listeye ekle
     document.getElementById('tasksList').appendChild(taskItem);
 }
+
+// Tüm görev atama select kutularını güncelle
+function updateTaskAssigneeOptions() {
+    const memberTags = document.querySelectorAll('#teamMembersList .team-member-tag');
+    const members = Array.from(memberTags).map(tag => tag.getAttribute('data-member'));
+    const taskAssignees = document.querySelectorAll('.task-assignee');
+    taskAssignees.forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Seçiniz</option>';
+        members.forEach(member => {
+            const option = document.createElement('option');
+            option.value = member;
+            option.textContent = member;
+            select.appendChild(option);
+        });
+        if (currentValue && members.includes(currentValue)) {
+            select.value = currentValue;
+        }
+    });
+}
+
 
 // Proje düzenleme modalını aç
 function openEditProjectModal(project) {
