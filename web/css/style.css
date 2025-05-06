@@ -150,11 +150,13 @@ body {
 /* Proje Kartları */
 .project-card {
     transition: var(--transition);
-    height: 100%;
+    height: 300px !important; /* Sabit yükseklik */
     position: relative;
     border-radius: var(--border-radius);
     overflow: hidden;
     border: none;
+    display: flex;
+    flex-direction: column;
 }
 
 .project-card:hover {
@@ -325,6 +327,8 @@ body {
     border-bottom-left-radius: var(--border-radius);
     border-bottom-right-radius: var(--border-radius);
     padding: 15px !important;
+    width: 100%; /* Tam genişlik */
+    overflow-y: auto; /* Dikey taşma durumunda kaydırma çubuğu göster */
 }
 
 /* Görev Kartları */
@@ -336,6 +340,13 @@ body {
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
     margin-bottom: 12px;
     padding: 15px;
+    height: 180px; /* Sabit yükseklik */
+    min-height: 180px; /* Minimum yükseklik */
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative; /* Göreceli konumlandırma */
 }
 
 .task-card:hover {

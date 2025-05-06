@@ -231,15 +231,15 @@ function createProjectCard(project) {
     const progress = project.taskCount > 0 ? Math.round((project.completedTaskCount / project.taskCount) * 100) : 0;
     
     col.innerHTML = `
-        <div class="card project-card h-100 shadow-lg border-0 rounded-4 position-relative project-modern-card" style="cursor:pointer; transition: box-shadow .2s;">
-            <div class="card-body pb-4">
+        <div class="card project-card shadow-lg border-0 rounded-4 position-relative project-modern-card" style="cursor:pointer; transition: box-shadow .2s;">
+            <div class="card-body pb-4 d-flex flex-column">
                 <div class="d-flex align-items-center mb-2">
                     <div class="flex-grow-1">
-                        <h5 class="card-title fw-bold mb-1 text-primary"><i class="bi bi-folder2-open me-2"></i>${project.name}</h5>
+                        <h5 class="card-title fw-bold mb-1 text-primary" style="display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;"><i class="bi bi-folder2-open me-2"></i>${project.name}</h5>
                     </div>
-                    <button class="btn btn-light btn-sm edit-project-btn border-0 ms-2 position-absolute top-0 end-0 mt-2 me-2" data-project-id="${project.id}" onclick="event.stopPropagation();"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-danger btn-sm delete-project-btn border-0 ms-2 position-absolute top-0 end-0 mt-2 me-2" data-project-id="${project.id}" onclick="event.stopPropagation();"><i class="bi bi-trash"></i></button>
                 </div>
-                <p class="card-text mb-2 text-secondary">${project.description}</p>
+                <p class="card-text mb-2 text-secondary" style="display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; flex: 1;">${project.description}</p>
                 <div class="d-flex align-items-center mb-3">
                     <span class="me-2 small text-muted"><i class="bi bi-people"></i> Ekip:</span>
                     <div class="team-members-avatars d-flex align-items-center">
@@ -268,7 +268,7 @@ function createProjectCard(project) {
                         aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
                     </div>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="d-flex justify-content-between align-items-center mt-auto">
                     <span class="text-muted small"><i class="bi bi-check-circle-fill"></i> ${project.completedTaskCount}/${project.taskCount} görev tamamlandı</span>
                     <a href="project.html?id=${project.id}" class="btn btn-outline-primary btn-sm px-3" onclick="event.stopPropagation();">
                         <i class="bi bi-kanban me-1"></i> Görev Panosu
@@ -285,9 +285,9 @@ function createProjectCard(project) {
         showProjectDetails(project);
     });
 
-    // Düzenleme butonuna tıklama olayını ekle
-    col.querySelector('.edit-project-btn').addEventListener('click', () => {
-        window.location.href = `project.html?id=${project.id}`;
+    // Silme butonuna tıklama olayını ekle
+    col.querySelector('.delete-project-btn').addEventListener('click', () => {
+        deleteProject(project.id, project.name);
     });
     // Hover efekti
     col.querySelector('.project-modern-card').addEventListener('mouseenter', function() {
@@ -681,4 +681,35 @@ function showAlert(message, type = 'info') {
         const bsAlert = new bootstrap.Alert(alertDiv);
         bsAlert.close();
     }, 5000);
+}
+
+// Proje silme fonksiyonu
+async function deleteProject(projectId, projectName) {
+    // Kullanıcıdan onay al
+    if (!confirm(`"${projectName}" projesini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve projeye ait tüm görevler de silinecektir.`)) {
+        return; // Kullanıcı iptal ettiyse işlemi durdur
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Oturum bilgisi bulunamadı!');
+        
+        const response = await fetch(`${API_URL.projects}/${projectId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Proje silinirken bir hata oluştu!');
+        }
+        
+        // Başarılı silme işlemi sonrası projeleri yeniden yükle
+        showAlert(`"${projectName}" projesi başarıyla silindi.`, 'success');
+        loadProjects(); // Proje listesini güncelle
+    } catch (error) {
+        console.error('Proje silinirken hata oluştu:', error);
+        showAlert(`Proje silinirken bir hata oluştu: ${error.message}`, 'danger');
+    }
 }
