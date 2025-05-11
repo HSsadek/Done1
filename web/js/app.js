@@ -25,19 +25,51 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedTeamMembers = [];
 
     if (teamMemberInput) {
+        // Kullanıcı seçildiğinde özel event'i dinle
+        teamMemberInput.addEventListener('userSelected', function(e) {
+            const userId = e.detail.id;
+            const username = e.detail.name;
+            
+            if (username && userId && !selectedTeamMembers.some(member => member.id === userId)) {
+                // Kullanıcı ID ve adını birlikte sakla
+                selectedTeamMembers.push({id: userId, name: username});
+                
+                const tag = document.createElement('div');
+                tag.className = 'team-member-tag badge bg-primary text-white d-flex align-items-center';
+                tag.setAttribute('data-member', username);
+                tag.setAttribute('data-id', userId); // Kullanıcı ID'sini sakla
+                tag.innerHTML = `${username} <span class="ms-2" style="cursor:pointer;" title="Kaldır">&times;</span>`;
+                
+                tag.querySelector('span').onclick = function() {
+                    selectedTeamMembers = selectedTeamMembers.filter(member => member.id !== userId);
+                    tag.remove();
+                    updateTaskAssigneeOptions();
+                };
+                
+                teamMembersList.appendChild(tag);
+                this.value = '';
+                updateTaskAssigneeOptions();
+            }
+        });
+        
+        // Eski change event listener'ını da koru (manuel ekleme için)
         teamMemberInput.addEventListener('change', function() {
             const username = this.value.trim();
-            if (username && !selectedTeamMembers.includes(username)) {
-                selectedTeamMembers.push(username);
+            if (username && !selectedTeamMembers.some(member => member.name === username)) {
+                // Manuel eklenen üyelerde ID olmayabilir, sadece isim sakla
+                selectedTeamMembers.push({name: username});
+                
                 const tag = document.createElement('div');
                 tag.className = 'team-member-tag badge bg-primary text-white d-flex align-items-center';
                 tag.setAttribute('data-member', username);
                 tag.innerHTML = `${username} <span class="ms-2" style="cursor:pointer;" title="Kaldır">&times;</span>`;
+                
                 tag.querySelector('span').onclick = function() {
-                    selectedTeamMembers = selectedTeamMembers.filter(u => u !== username);
+                    selectedTeamMembers = selectedTeamMembers.filter(member => member.name !== username);
                     tag.remove();
                     updateTaskAssigneeOptions();
                 };
+                
                 teamMembersList.appendChild(tag);
                 this.value = '';
                 updateTaskAssigneeOptions();
@@ -320,11 +352,13 @@ async function saveProject() {
     const projectDescription = document.getElementById('projectDescription').value.trim();
     
     // Ekip üyelerini al
-    // Sadece kullanıcı _id'lerini topla
+    // Kullanıcı _id'lerini topla
     const teamMemberTags = document.querySelectorAll('#teamMembersList .team-member-tag');
     const teamMembers = Array.from(teamMemberTags)
         .map(tag => tag.getAttribute('data-id'))
         .filter(Boolean); // Sadece id'si olanları al
+    
+    console.log('Ekip üyeleri ID\'leri:', teamMembers);
     
     // Görevleri al
     const taskItems = document.querySelectorAll('#tasksList .task-item');
@@ -333,16 +367,39 @@ async function saveProject() {
         const assigneeSelect = item.querySelector('.task-assignee');
         const selectedOption = assigneeSelect.options[assigneeSelect.selectedIndex];
         let assignedTo = '';
-        if (selectedOption) {
+        
+        if (selectedOption && selectedOption.value) {
+            // Seçili option'dan kullanıcı ID'sini al
             const id = selectedOption.getAttribute('data-id');
-            if (id) assignedTo = id;
+            
+            // Eğer ID varsa kullan, yoksa ilgili tag'dan ID'yi bulmaya çalış
+            if (id) {
+                assignedTo = id;
+                console.log('Görev ataması için kullanıcı ID bulundu:', id);
+            } else {
+                // Seçili kullanıcı adına göre team member tag'larından ID'yi bul
+                const memberName = selectedOption.value;
+                const memberTag = document.querySelector(`.team-member-tag[data-member="${memberName}"]`);
+                
+                if (memberTag) {
+                    const tagId = memberTag.getAttribute('data-id');
+                    if (tagId) {
+                        assignedTo = tagId;
+                        console.log('Tag\'dan kullanıcı ID bulundu:', tagId);
+                    }
+                }
+            }
         }
-        return {
+        
+        const taskData = {
             title: item.querySelector('.task-title').value,
             description: item.querySelector('.task-description').value,
             dueDate: item.querySelector('.task-end-date').value,
             assignedTo: assignedTo
         };
+        
+        console.log('Oluşturulan görev:', taskData);
+        return taskData;
     });
     
     // Validasyon
@@ -356,12 +413,25 @@ async function saveProject() {
     const projectEndDate = document.getElementById('projectEndDate').value;
 
     // Backend ile uyumlu yeni proje objesi oluştur
+    // Takım üyelerinin ID'lerini doğru şekilde topla
+    const teamMemberIds = [];
+    // Değişken adı çakışmasını önlemek için farklı bir isim kullanıyoruz
+    const allTeamMemberTags = document.querySelectorAll('#teamMembersList .team-member-tag');
+    allTeamMemberTags.forEach(tag => {
+        const memberId = tag.getAttribute('data-id');
+        if (memberId) {
+            teamMemberIds.push(memberId);
+        }
+    });
+    
+    console.log('Ekip üyeleri ID\'leri (gönderilecek):', teamMemberIds);
+    
     const newProject = {
         title: projectName,
         description: projectDescription,
         startDate: projectStartDate,
         endDate: projectEndDate,
-        team: teamMembers.map(member => ({ _id: member }))
+        team: teamMemberIds // Doğrudan ID dizisini gönder
     };
 
     try {
@@ -378,22 +448,50 @@ async function saveProject() {
         if (response.ok) {
             const createdProject = await response.json();
             // Proje oluşturulduktan sonra görevleri sırayla ekle
+            console.log('Oluşturulan proje:', createdProject);
+            let taskAddedCount = 0;
+            
             for (const task of tasks) {
+                // Görev başlığı ve atanan kişi zorunlu (Task modeline göre)
                 if (task.title && task.assignedTo) {
-                    await fetch(API_URL.tasks, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                            title: task.title,
-                            description: task.description,
-                            assignedTo: task.assignedTo,
-                            project: createdProject._id,
-                            dueDate: task.dueDate
-                        })
-                    });
+                    const taskData = {
+                        title: task.title,
+                        description: task.description || 'Görev açıklaması', // Boş bırakılamaz
+                        // project zaten URL'de gönderildiği için body'de göndermiyoruz
+                        status: 'Yapılacak', // Backend'deki enum değerlerine uygun olmalı
+                        assignedTo: task.assignedTo // Zorunlu alan
+                    };
+                    
+                    console.log('Görev atanan kişi ID:', task.assignedTo);
+                    
+                    // Eğer görev bitiş tarihi varsa ekle
+                    if (task.dueDate) {
+                        taskData.dueDate = task.dueDate;
+                    }
+                    
+                    console.log('Gönderilecek görev verisi:', taskData);
+                    
+                    try {
+                        // Görev oluşturma endpoint'ine projectId parametresini URL'de gönder
+                        const taskResponse = await fetch(`${API_URL.projects}/${createdProject._id}/tasks`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(taskData)
+                        });
+                        
+                        if (taskResponse.ok) {
+                            taskAddedCount++;
+                            const savedTask = await taskResponse.json();
+                            console.log('Kaydedilen görev:', savedTask);
+                        } else {
+                            console.error('Görev eklenirken hata:', await taskResponse.text());
+                        }
+                    } catch (taskError) {
+                        console.error('Görev eklenirken hata oluştu:', taskError);
+                    }
                 }
             }
             showAlert('Proje ve görevler başarıyla oluşturuldu!', 'success');
@@ -470,28 +568,44 @@ function removeTeamMember(element) {
 // Görev atama seçeneklerini güncelle
 function updateTaskAssigneeOptions() {
     const memberTags = document.querySelectorAll('#teamMembersList .team-member-tag');
-    const members = Array.from(memberTags).map(tag => tag.getAttribute('data-member'));
     
     // Tüm görev atama seçeneklerini güncelle
     const taskAssignees = document.querySelectorAll('.task-assignee');
     taskAssignees.forEach(select => {
         // Mevcut seçili değeri koru
         const currentValue = select.value;
+        const currentId = select.getAttribute('data-selected-id');
         
         // Seçenekleri temizle ve varsayılan seçeneği ekle
         select.innerHTML = '<option value="">Seçiniz</option>';
         
         // Ekip üyelerini seçeneklere ekle
-        members.forEach(member => {
+        memberTags.forEach(tag => {
+            const member = tag.getAttribute('data-member');
+            const memberId = tag.getAttribute('data-id');
+            
             const option = document.createElement('option');
             option.value = member;
             option.textContent = member;
+            
+            // Kullanıcı ID'sini option'a ekle
+            if (memberId) {
+                option.setAttribute('data-id', memberId);
+            }
+            
             select.appendChild(option);
         });
         
         // Önceki seçili değeri geri yükle (eğer hala mevcut ekip üyelerinde varsa)
-        if (currentValue && members.includes(currentValue)) {
-            select.value = currentValue;
+        if (currentValue) {
+            // İsim ile eşleştirmeyi dene
+            const options = select.querySelectorAll('option');
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === currentValue) {
+                    select.value = currentValue;
+                    break;
+                }
+            }
         }
     });
 }

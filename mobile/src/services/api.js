@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 
-const API_URL = 'http://10.14.12.119:5000/api';///ip adressi her seferinde değiştirilecektir 
+const API_URL = 'http://10.14.11.198:5000/api';///ip adressi her seferinde değiştirilecektir 
 
 
 const api = axios.create({

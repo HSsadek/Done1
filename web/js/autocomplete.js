@@ -40,8 +40,16 @@ function setupUserAutocomplete(inputElem) {
                 `;
                 item.style.cursor = 'pointer';
                 item.addEventListener('mousedown', function() {
+                    // Kullanıcı ID'sini ve adını özel bir event ile gönder
+                    const selectEvent = new CustomEvent('userSelected', {
+                        detail: {
+                            id: user._id,
+                            name: user.name || user.email
+                        }
+                    });
                     inputElem.value = user.name || user.email;
-                    container.innerHTML = `${user.name || user.email}`;
+                    container.innerHTML = '';
+                    inputElem.dispatchEvent(selectEvent);
                 });
                 container.appendChild(item);
             });

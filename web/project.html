@@ -57,6 +57,9 @@
                 <button class="btn btn-outline-primary me-2" id="addTaskButton" data-bs-toggle="modal" data-bs-target="#addTaskModal">
                     <i class="bi bi-plus-circle me-2"></i>Yeni Görev Ekle
                 </button>
+                <button class="btn btn-outline-info me-2" id="addTeamMemberButton" data-bs-toggle="modal" data-bs-target="#addTeamMemberModal">
+                    <i class="bi bi-person-plus me-2"></i>Üye Ekle
+                </button>
                 <button class="btn btn-outline-secondary" id="editProjectButton" data-bs-toggle="modal" data-bs-target="#editProjectModal">
                     <i class="bi bi-pencil me-2"></i>Projeyi Düzenle
                 </button>
@@ -183,15 +186,17 @@
                             <label for="projectDescriptionInput" class="form-label">Proje Açıklaması</label>
                             <textarea class="form-control" id="projectDescriptionInput" rows="3"></textarea>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Ekip Üyeleri</label>
-                            <div id="teamMembersContainer">
-                                <!-- Team members will be added here dynamically -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="projectStartDateInput" class="form-label">Başlangıç Tarihi</label>
+                                <input type="date" class="form-control" id="projectStartDateInput">
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addTeamMemberBtn">
-                                <i class="bi bi-plus-circle me-1"></i>Yeni Üye Ekle
-                            </button>
+                            <div class="col-md-6">
+                                <label for="projectEndDateInput" class="form-label">Bitiş Tarihi</label>
+                                <input type="date" class="form-control" id="projectEndDateInput">
+                            </div>
                         </div>
+
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -275,41 +280,88 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Görevi Düzenle</h5>
+        <h5 class="modal-title">Görev Düzenle</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form id="editProjectForm">
+        <form id="editTaskForm">
+          <input type="hidden" id="editTaskId">
           <div class="mb-3">
-            <label for="projectName" class="form-label">Proje Adı</label>
-            <input type="text" class="form-control" id="projectName" required>
+            <label for="editTaskTitle" class="form-label">Görev Başlığı</label>
+            <input type="text" class="form-control" id="editTaskTitle" required>
           </div>
           <div class="mb-3">
-            <label for="projectDescriptionInput" class="form-label">Proje Açıklaması</label>
-            <textarea class="form-control" id="projectDescriptionInput" rows="3"></textarea>
+            <label for="editTaskDescription" class="form-label">Açıklama</label>
+            <textarea class="form-control" id="editTaskDescription" rows="3"></textarea>
           </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="editTaskStartDate" class="form-label">Başlangıç Tarihi</label>
+              <input type="date" class="form-control" id="editTaskStartDate">
+            </div>
+            <div class="col-md-6">
               <label for="editTaskEndDate" class="form-label">Bitiş Tarihi</label>
               <input type="date" class="form-control" id="editTaskEndDate">
             </div>
           </div>
           <div class="mb-3">
-            <label for="editTaskAssignee" class="form-label">Atanan Kişi</label>
-            <input type="text" class="form-control" id="editTaskAssignee">
+            <label for="editTaskAssignee" class="form-label">Görev Ataması</label>
+            <select class="form-select" id="editTaskAssignee">
+              <option value="">Seçiniz</option>
+              <!-- Team members will be added here dynamically -->
+            </select>
           </div>
           <div class="mb-3">
             <label for="editTaskStatus" class="form-label">Durum</label>
             <select class="form-select" id="editTaskStatus">
-              <option value="notStarted">Başlamadı</option>
+              <option value="notStarted">Yapılacak</option>
               <option value="inProgress">Devam Ediyor</option>
-              <option value="test">Test</option>
+              <option value="test">Test Edilecek</option>
               <option value="done">Tamamlandı</option>
             </select>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
         <button type="button" class="btn btn-primary" id="saveEditTaskBtn">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Team Member Modal -->
+<div class="modal fade" id="addTeamMemberModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Ekip Üyesi Ekle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Kullanıcı Ara</label>
+          <div class="input-group mb-3">
+            <input type="text" class="form-control" id="teamMemberInput" placeholder="E-posta veya kullanıcı adı ile ara" autocomplete="off">
+            <button class="btn btn-outline-primary" type="button" id="searchUsersBtn">Ara</button>
+          </div>
+          <div class="user-search-results mt-3">
+            <ul class="list-group" id="userSearchResults">
+              <!-- Arama sonuçları buraya gelecek -->
+            </ul>
+          </div>
+        </div>
+        <hr>
+        <div class="mb-3">
+          <label class="form-label">Seçilen Ekip Üyeleri</label>
+          <div id="teamMembersList" class="d-flex flex-wrap gap-2 mt-2">
+            <!-- Seçilen ekip üyeleri buraya eklenecek -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" class="btn btn-primary" id="saveTeamMembersBtn">Kaydet</button>
       </div>
     </div>
   </div>

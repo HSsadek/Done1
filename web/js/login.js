@@ -31,6 +31,12 @@ loginForm.addEventListener('submit', async function(e) {
         const data = await response.json();
         if (response.ok) {
             localStorage.setItem('token', data.token);
+            
+            // Tarayıcı geçmişini manipüle et
+            // Giriş yaptıktan sonra geri tuşuna basınca login sayfasına dönmeyi engelle
+            history.pushState(null, "", window.location.href);
+            history.replaceState(null, "", 'index.html');
+            
             window.location.href = 'index.html';
         } else {
             alert(data.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');

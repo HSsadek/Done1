@@ -52,9 +52,18 @@ function setupEventListeners() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function() {
-            localStorage.clear(); // Tüm localStorage'ı temizle
-window.location.replace('login.html'); // login.html'e yönlendir
-setTimeout(() => { window.location.reload(true); }, 100); // Sekmeyi tam yenile
+            // Tüm localStorage'ı temizle
+            localStorage.clear();
+            
+            // Tarayıcı geçmişini temizle
+            // Geçmişi manipüle ederek geri tuşunu etkisiz hale getir
+            history.pushState(null, "", window.location.href);
+            history.pushState(null, "", window.location.href);
+            history.replaceState(null, "", 'login.html');
+            
+            // Login sayfasına yönlendir ve sayfayı tam olarak yenile
+            window.location.replace('login.html');
+            setTimeout(() => { window.location.reload(true); }, 100);
         });
     }
 }
@@ -457,12 +466,16 @@ async function saveProfile() {
         }
     }
     
+    // Profil resmi al
+    const profileImage = document.getElementById('editProfileImage').src;
+    
     // Profil verilerini oluştur
     const profileData = {
         name: name,
         email: email,
         role: role,
-        password: password !== '' ? password : undefined
+        password: password !== '' ? password : undefined,
+        profileImage: profileImage
     };
     
     try {
@@ -479,12 +492,24 @@ async function saveProfile() {
         // Başarılı güncelleme sonrası
         showAlert('Profil bilgileriniz başarıyla güncellendi!', 'success');
         
+        // Profil bilgilerini güncelle
+        document.getElementById('userName').textContent = name;
+        document.getElementById('userEmail').textContent = email;
+        document.getElementById('userRole').textContent = role;
+        document.getElementById('profileImage').src = profileImage;
+        
+        // Ayarlar sekmesindeki profil bilgilerini de güncelle
+        document.getElementById('settingsName').value = name;
+        document.getElementById('settingsEmail').value = email;
+        document.getElementById('settingsRole').value = role;
+        document.getElementById('settingsProfileImage').src = profileImage;
+        
         // Modal'ı kapat
         const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
         modal.hide();
         
-        // Profil bilgilerini yeniden yükle
-        loadUserProfile();
+        // Profil bilgilerini yeniden yükle (API entegrasyonu aktif olduğunda kullanılacak)
+        // loadUserProfile();
     } catch (error) {
         console.error('Profil güncellenirken hata oluştu:', error);
         showAlert('Profil güncellenirken bir hata oluştu.', 'danger');
@@ -510,7 +535,9 @@ function handleProfileImageChange(event) {
         // Resmi önizle
         const reader = new FileReader();
         reader.onload = function(e) {
-            document.getElementById('editProfileImage').src = './images/default-profile.svg';
+            document.getElementById('editProfileImage').src = e.target.result;
+            // Başarılı yükleme bildirimi göster
+            showAlert('Profil resmi başarıyla yüklendi. Değişiklikleri kaydetmek için "Kaydet" butonuna tıklayın.', 'info');
         };
         reader.readAsDataURL(file);
         
