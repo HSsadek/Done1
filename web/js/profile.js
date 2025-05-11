@@ -2,22 +2,14 @@
 
 // API URL'leri (Backend entegrasyonu için)
 const API_URL = {
-    projects: 'http://localhost:5000/api/projects',
-    tasks: 'http://localhost:5000/api/tasks',
     profile: 'http://localhost:5000/api/auth/profile',
-    activities: 'http://localhost:5000/api/activities'
+    projects: 'http://localhost:5000/api/projects'
 };
 
 // DOM yüklendikten sonra çalışacak fonksiyonlar
 document.addEventListener('DOMContentLoaded', () => {
     // Kullanıcı bilgilerini yükle
     loadUserProfile();
-    
-    // Kullanıcının projelerini yükle
-    loadUserProjects();
-    
-    // Kullanıcının aktivitelerini yükle
-    loadUserActivities();
     
     // Event listener'ları ekle
     setupEventListeners();
@@ -78,43 +70,12 @@ async function loadUserProfile() {
         });
         if (!response.ok) throw new Error('Profil getirilemedi');
         const userData = await response.json();
-        // İstatistikleri doldurmak için projeler de lazım
-        const stats = await fetchUserStats(token, userData._id);
-        userData.stats = stats;
         renderUserProfile(userData);
     } catch (error) {
         console.error('Kullanıcı bilgileri yüklenirken hata oluştu:', error);
         showAlert('Kullanıcı bilgileri yüklenirken bir hata oluştu.', 'danger');
     }
 }
-
-// Kullanıcıya ait proje ve görev istatistiklerini getir
-async function fetchUserStats(token, userId) {
-    try {
-        const projectsResponse = await fetch(API_URL.projects, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!projectsResponse.ok) throw new Error('Projeler getirilemedi');
-        const allProjects = await projectsResponse.json();
-        // Kullanıcının sahibi olduğu veya ekipte olduğu projeler
-        const userProjects = allProjects.filter(p => p.owner._id === userId || (p.team && p.team.some(t => t._id === userId)));
-        let completedTasks = 0, pendingTasks = 0;
-        userProjects.forEach(project => {
-            if (project.tasks && Array.isArray(project.tasks)) {
-                completedTasks += project.tasks.filter(task => task.status === 'Tamamlandı').length;
-                pendingTasks += project.tasks.filter(task => task.status !== 'Tamamlandı').length;
-            }
-        });
-        return {
-            totalProjects: userProjects.length,
-            completedTasks,
-            pendingTasks
-        };
-    } catch (error) {
-        return { totalProjects: 0, completedTasks: 0, pendingTasks: 0 };
-    }
-}
-
 
 // Kullanıcı profilini ekrana render et
 function renderUserProfile(userData) {
@@ -123,11 +84,6 @@ function renderUserProfile(userData) {
     document.getElementById('userEmail').textContent = userData.email;
     document.getElementById('userRole').textContent = userData.role;
     document.getElementById('profileImage').src = userData.profileImage;
-    
-    // İstatistikleri güncelle
-    document.getElementById('totalProjects').textContent = userData.stats.totalProjects;
-    document.getElementById('completedTasks').textContent = userData.stats.completedTasks;
-    document.getElementById('pendingTasks').textContent = userData.stats.pendingTasks;
     
     // Düzenleme formunu doldur
     document.getElementById('editName').value = userData.name;
@@ -146,27 +102,58 @@ function renderUserProfile(userData) {
 async function loadUserProjects() {
     try {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
         const response = await fetch(API_URL.projects, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
         });
-        if (!response.ok) throw new Error('Projeler getirilemedi');
-        const allProjects = await response.json();
-        // Kullanıcının sahibi olduğu veya ekipte olduğu projeleri filtrele
+
+        if (!response.ok) {
+            throw new Error('Projeler yüklenemedi');
+        }
+
+        const projects = await response.json();
         const userId = await getUserIdFromProfile(token);
-        const userProjects = allProjects.filter(p => p.owner._id === userId || (p.team && p.team.some(t => t._id === userId)));
-        // Proje kartına uygun şekilde dönüştür
-        const projects = userProjects.map(p => ({
-            id: p._id,
-            name: p.title,
-            description: p.description,
-            taskCount: p.tasks ? p.tasks.length : 0,
-            completedTaskCount: p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0
-        }));
-        renderUserProjects(projects);
+
+        // Kullanıcının sahibi olduğu veya ekipte olduğu projeleri filtrele
+        const userProjects = projects.filter(p => 
+            p.owner && p.owner._id === userId || 
+            (p.team && p.team.some(t => t._id === userId))
+        );
+
+        // Projeleri dönüştür ve durumlarını kontrol et
+        const formattedProjects = userProjects.map(p => {
+            const taskCount = p.tasks ? p.tasks.length : 0;
+            const completedTaskCount = p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0;
+            const isCompleted = taskCount > 0 && taskCount === completedTaskCount;
+
+            return {
+                id: p._id,
+                name: p.title,
+                description: p.description,
+                taskCount: taskCount,
+                completedTaskCount: completedTaskCount,
+                isCompleted: isCompleted,
+                teamMembers: p.team ? p.team.map(member => ({
+                    name: member.name,
+                    email: member.email,
+                    profileImage: member.profileImage
+                })) : []
+            };
+        });
+
+        // Aktif projeleri render et
+        const activeProjects = formattedProjects.filter(p => !p.isCompleted);
+        renderProjects(activeProjects, 'userProjects');
+
     } catch (error) {
-        console.error('Projeler yüklenirken hata oluştu:', error);
-        showAlert('Projeler yüklenirken bir hata oluştu.', 'danger');
+        console.error('Projeler yüklenirken hata:', error);
+        showAlert('Projeler yüklenirken bir hata oluştu', 'danger');
     }
 }
 
@@ -180,75 +167,86 @@ async function getUserIdFromProfile(token) {
     return user._id;
 }
 
+// Projeleri render et
+function renderProjects(projects, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-// Kullanıcının projelerini ekrana render et
-function renderUserProjects(projects) {
-    const projectsContainer = document.getElementById('userProjects');
-    projectsContainer.innerHTML = '';
-    
     if (projects.length === 0) {
-        projectsContainer.innerHTML = `
-            <div class="col-12 text-center py-3">
-                <i class="bi bi-folder-x display-4 text-muted"></i>
-                <h5 class="mt-3 text-muted">Henüz hiç projeniz yok</h5>
-                <a href="index.html" class="btn btn-sm btn-primary mt-2">Yeni Proje Oluştur</a>
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <div class="py-5">
+                    <i class="bi bi-folder-x display-1 text-muted"></i>
+                    <h3 class="mt-3 text-muted">Henüz hiç proje yok</h3>
+                    <p class="text-muted">Yeni bir proje oluşturmak için ana sayfaya gidin.</p>
+                </div>
             </div>
         `;
         return;
     }
-    
-    projects.forEach(project => {
-        const projectCard = createProjectCard(project);
-        projectsContainer.appendChild(projectCard);
-    });
-}
 
-// Proje kartı oluştur
-function createProjectCard(project) {
-    const col = document.createElement('div');
-    col.className = 'col-md-6 mb-3';
-    
-    // İlerleme yüzdesini hesapla
-    const progress = project.taskCount > 0 ? Math.round((project.completedTaskCount / project.taskCount) * 100) : 0;
-    
-    // İlerleme durumuna göre renk belirle
-    let progressColor = 'bg-primary';
-    if (progress >= 100) {
-        progressColor = 'bg-success';
-    } else if (progress >= 70) {
-        progressColor = 'bg-info';
-    } else if (progress >= 30) {
-        progressColor = 'bg-warning';
-    } else if (progress < 30) {
-        progressColor = 'bg-danger';
-    }
-    
-    col.innerHTML = `
-        <div class="project-card h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="card-title">${project.name}</h5>
-                    <span class="badge ${progressColor} rounded-pill">%${progress}</span>
-                </div>
-                <p class="card-text small">${project.description}</p>
-                <div class="progress mb-3" style="height: 6px;">
-                    <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${progress}%" 
-                        aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+    container.innerHTML = projects.map(project => `
+        <div class="col-md-4 mb-4">
+            <div class="card project-card shadow-lg border-0 rounded-4 position-relative project-modern-card" style="cursor:pointer; transition: box-shadow .2s;">
+                <div class="card-body pb-4 d-flex flex-column">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title fw-bold mb-1 text-primary" style="display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;">
+                                <i class="bi bi-folder2-open me-2"></i>${project.name}
+                            </h5>
+                        </div>
+                        ${project.isCompleted ? 
+                            '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Tamamlandı</span>' : 
+                            ''}
                     </div>
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <p class="card-text text-muted small mb-0">
-                        <i class="bi bi-check-circle-fill me-1"></i> ${project.completedTaskCount}/${project.taskCount} görev
+                    <p class="card-text mb-2 text-secondary" style="display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; flex: 1;">
+                        ${project.description}
                     </p>
-                    <a href="project.html?id=${project.id}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-kanban me-1"></i> Görev Panosu
-                    </a>
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="me-2 small text-muted"><i class="bi bi-people"></i> Ekip:</span>
+                        <div class="team-members-avatars d-flex align-items-center">
+                            ${project.teamMembers.slice(0,5).map(member => {
+                                if (member.profileImage) {
+                                    return `<img src="${member.profileImage}" class="rounded-circle me-1 border" alt="${member.name}" title="${member.name}" style="width:32px;height:32px;object-fit:cover;">`;
+                                } else {
+                                    const initials = member.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                                    return `<span class="rounded-circle bg-primary text-white d-inline-flex justify-content-center align-items-center me-1 border" title="${member.name}" style="width:32px;height:32px;font-size:1rem;">${initials}</span>`;
+                                }
+                            }).join('')}
+                            ${project.teamMembers.length > 5 ? 
+                                `<span class="badge bg-secondary ms-1">+${project.teamMembers.length-5}</span>` : 
+                                ''}
+                        </div>
+                        <span class="ms-2 small text-muted">${project.teamMembers.length} üye</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 8px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                            style="width: ${project.taskCount > 0 ? (project.completedTaskCount / project.taskCount * 100) : 0}%" 
+                            aria-valuenow="${project.taskCount > 0 ? (project.completedTaskCount / project.taskCount * 100) : 0}" 
+                            aria-valuemin="0" 
+                            aria-valuemax="100">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-auto">
+                        <span class="text-muted small">
+                            <i class="bi bi-check-circle-fill"></i> ${project.completedTaskCount}/${project.taskCount} görev tamamlandı
+                        </span>
+                        <a href="project.html?id=${project.id}" class="btn btn-outline-primary btn-sm px-3" onclick="event.stopPropagation();">
+                            <i class="bi bi-kanban me-1"></i> Görev Panosu
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-    `;
-    
-    return col;
+    `).join('');
+
+    // Kartlara tıklama olayı ekle
+    container.querySelectorAll('.project-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const projectId = card.querySelector('a').href.split('id=')[1];
+            window.location.href = `project.html?id=${projectId}`;
+        });
+    });
 }
 
 // Kullanıcının aktivitelerini yükle (API'den veri çekme simülasyonu)
@@ -402,16 +400,41 @@ async function saveSettings() {
             showAlert('Şifreler eşleşmiyor.', 'warning');
             return;
         }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showAlert('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.', 'danger');
+            return;
+        }
+
+        // Backend'e gönderilecek veri
+        const updateData = {
+            name,
+            email,
+            role,
+            profileImage
+        };
+
+        if (password) {
+            updateData.password = password;
+        }
+
+        // API çağrısı
+        const response = await fetch(API_URL.profile, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(updateData)
+        });
+
+        if (!response.ok) {
+            throw new Error('Profil güncellenirken bir hata oluştu');
+        }
+
+        const result = await response.json();
         
-        // Gerçek uygulamada burada API çağrısı yapılacak
-        // const response = await fetch(API_URL.profile, {
-        //     method: 'PUT',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({ name, email, role, password, profileImage })
-        // });
-        // const result = await response.json();
-        
-        // Şimdilik başarılı olduğunu varsayalım
         // Profil bilgilerini güncelle
         document.getElementById('userName').textContent = name;
         document.getElementById('userEmail').textContent = email;

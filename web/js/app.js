@@ -96,6 +96,101 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Event listener'ları ayarla
 function setupEventListeners() {
+    // Tamamlanan projeler linki
+    const completedProjectsLink = document.getElementById('completedProjectsLink');
+    if (completedProjectsLink) {
+        completedProjectsLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleCompletedProjects();
+        });
+    }
+
+    // Arama çubuğu
+    const projectSearch = document.getElementById('projectSearch');
+    if (projectSearch) {
+        projectSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const projectCards = document.querySelectorAll('.project-card');
+            let visibleCount = 0;
+            
+            projectCards.forEach(card => {
+                try {
+                    // Güvenli bir şekilde elementleri al
+                    const titleElement = card.querySelector('.card-title');
+                    const descriptionElement = card.querySelector('.card-text');
+                    const taskCountElement = card.querySelector('.text-muted small');
+                    const teamMembersElements = card.querySelectorAll('.team-members-avatars img, .team-members-avatars span');
+                    
+                    // Elementlerin varlığını kontrol et ve değerlerini al
+                    const projectName = titleElement ? titleElement.textContent.toLowerCase() : '';
+                    const projectDescription = descriptionElement ? descriptionElement.textContent.toLowerCase() : '';
+                    const taskCount = taskCountElement ? taskCountElement.textContent.toLowerCase() : '';
+                    
+                    // Ekip üyelerinin isimlerini topla
+                    const teamMembers = Array.from(teamMembersElements)
+                        .map(member => {
+                            const title = member.getAttribute('title');
+                            const alt = member.getAttribute('alt');
+                            return (title || alt || '').toLowerCase();
+                        })
+                        .filter(name => name)
+                        .join(' ');
+                    
+                    // Arama terimini boşluklara göre ayır
+                    const searchTerms = searchTerm.split(' ').filter(term => term.length > 0);
+                    
+                    // Her bir arama terimi için kontrol yap
+                    const matches = searchTerms.every(term => 
+                        projectName.includes(term) || 
+                        projectDescription.includes(term) || 
+                        teamMembers.includes(term) ||
+                        taskCount.includes(term)
+                    );
+                    
+                    // Kartın görünürlüğünü ayarla
+                    const cardContainer = card.closest('.col-md-4');
+                    if (cardContainer) {
+                        if (matches) {
+                            cardContainer.style.display = '';
+                            visibleCount++;
+                        } else {
+                            cardContainer.style.display = 'none';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Kart işlenirken hata oluştu:', error);
+                    const cardContainer = card.closest('.col-md-4');
+                    if (cardContainer) {
+                        cardContainer.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Sonuç bulunamadı mesajını göster/gizle
+            const projectsList = document.getElementById('projectsList');
+            if (projectsList) {
+                const noResultsMessage = document.getElementById('noResultsMessage');
+                if (visibleCount === 0 && searchTerm !== '') {
+                    if (!noResultsMessage) {
+                        const message = document.createElement('div');
+                        message.id = 'noResultsMessage';
+                        message.className = 'col-12 text-center py-5';
+                        message.innerHTML = `
+                            <div class="py-5">
+                                <i class="bi bi-search display-1 text-muted"></i>
+                                <h3 class="mt-3 text-muted">Sonuç bulunamadı</h3>
+                                <p class="text-muted">Arama kriterlerinize uygun proje bulunamadı.</p>
+                            </div>
+                        `;
+                        projectsList.appendChild(message);
+                    }
+                } else if (noResultsMessage) {
+                    noResultsMessage.remove();
+                }
+            }
+        });
+    }
+
     // Yeni proje ekleme butonu
     const saveProjectBtn = document.getElementById('saveProjectBtn');
     if (saveProjectBtn) saveProjectBtn.addEventListener('click', saveProject);
@@ -181,41 +276,84 @@ function setupEventListeners() {
     // Düzenleme modalı için ekip üyesi ekleme butonu
     const editAddTeamMemberBtn = document.getElementById('editAddTeamMember');
     if (editAddTeamMemberBtn) editAddTeamMemberBtn.addEventListener('click', editAddTeamMember);
+
+    // Görev durumu değiştirme olaylarını dinle
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('task-status-select')) {
+            const taskId = e.target.getAttribute('data-task-id');
+            const newStatus = e.target.value;
+            if (taskId && newStatus) {
+                updateTaskStatus(taskId, newStatus);
+            }
+        }
+    });
 }
 
 // Projeleri yükle (sadece giriş yapan kullanıcıya ait gerçek projeler)
 async function loadProjects() {
-    console.log('loadProjects() çağrıldı');
     try {
         const token = localStorage.getItem('token');
         if (!token) {
-            console.log('Token yok, kullanıcı giriş yapmamış.');
+            window.location.href = 'login.html';
             return;
         }
+
         const response = await fetch(API_URL.projects, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
         });
-        if (!response.ok) throw new Error('Projeler getirilemedi');
-        const allProjects = await response.json();
-        console.log('APIden dönen tüm projeler:', allProjects);
-        // Kullanıcının sahibi olduğu veya ekipte olduğu projeleri filtrele
+
+        if (!response.ok) {
+            throw new Error('Projeler yüklenemedi');
+        }
+
+        const projects = await response.json();
         const userId = await getUserIdFromProfile(token);
-        console.log('Kullanıcı ID:', userId);
-        console.log('allProjects', allProjects);
-        console.log('userId', userId);
-        const userProjects = allProjects.filter(p => p.owner && p.owner._id === userId || (p.team && p.team.some(t => t._id === userId)));
-// Proje kartına uygun şekilde dönüştür (profile.js ile aynı)
-const projects = userProjects.map(p => ({
-    id: p._id,
-    name: p.title,
-    description: p.description,
-    taskCount: p.tasks ? p.tasks.length : 0,
-    completedTaskCount: p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0
-}));
-renderProjects(projects);
+
+        // Kullanıcının sahibi olduğu veya ekipte olduğu projeleri filtrele
+        const userProjects = projects.filter(p => 
+            p.owner && p.owner._id === userId || 
+            (p.team && p.team.some(t => t._id === userId))
+        );
+
+        // Projeleri dönüştür ve durumlarını kontrol et
+        const formattedProjects = userProjects.map(p => {
+            const taskCount = p.tasks ? p.tasks.length : 0;
+            const completedTaskCount = p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0;
+            const isCompleted = taskCount > 0 && taskCount === completedTaskCount;
+
+            return {
+                id: p._id,
+                name: p.title,
+                description: p.description,
+                taskCount: taskCount,
+                completedTaskCount: completedTaskCount,
+                isCompleted: isCompleted,
+                teamMembers: p.team ? p.team.map(member => ({
+                    name: member.name,
+                    email: member.email,
+                    profileImage: member.profileImage
+                })) : []
+            };
+        });
+
+        // Sayfa URL'sine göre projeleri filtrele
+        const currentPage = window.location.pathname;
+        let filteredProjects = formattedProjects;
+
+        if (currentPage.includes('completed-projects.html')) {
+            // Sadece tamamlanan projeleri göster
+            filteredProjects = formattedProjects.filter(project => project.isCompleted);
+        } else if (currentPage.includes('index.html') || currentPage === '/') {
+            // Ana sayfada sadece tamamlanmamış projeleri göster
+            filteredProjects = formattedProjects.filter(project => !project.isCompleted);
+        }
+
+        renderProjects(filteredProjects);
     } catch (error) {
-        console.error('Projeler yüklenirken hata oluştu:', error);
-        showAlert('Projeler yüklenirken bir hata oluştu.', 'danger');
+        console.error('Projeler yüklenirken hata:', error);
+        showAlert('Projeler yüklenirken bir hata oluştu', 'danger');
     }
 }
 
@@ -295,6 +433,19 @@ function createProjectCard(project) {
                     </div>
                     <span class="ms-2 small text-muted">${Array.isArray(project.teamMembers) ? project.teamMembers.length : 0} üye</span>
                 </div>
+                ${project.isCompleted ? `
+                <div class="progress mb-2" style="height: 8px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 100%" 
+                        aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                    <span class="text-muted small"><i class="bi bi-check-circle-fill"></i> Tüm görevler tamamlandı</span>
+                    <a href="project.html?id=${project.id}" class="btn btn-outline-success btn-sm px-3" onclick="event.stopPropagation();">
+                        <i class="bi bi-kanban me-1"></i> Görev Panosu
+                    </a>
+                </div>
+                ` : `
                 <div class="progress mb-2" style="height: 8px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: ${progress}%" 
                         aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
@@ -306,11 +457,12 @@ function createProjectCard(project) {
                         <i class="bi bi-kanban me-1"></i> Görev Panosu
                     </a>
                 </div>
+                `}
             </div>
         </div>
     `;
     
-    // Kartın tamamına tıklanınca detay modalını aç
+    // Kartın tamamına tıklama olayını ekle
     col.querySelector('.card').addEventListener('click', function(e) {
         // Eğer tıklama edit butonundan geliyorsa detay açma
         if (e.target.closest('.edit-project-btn')) return;
@@ -825,5 +977,73 @@ async function deleteProject(projectId, projectName) {
     } catch (error) {
         console.error('Proje silinirken hata oluştu:', error);
         showAlert(`Proje silinirken bir hata oluştu: ${error.message}`, 'danger');
+    }
+}
+
+// Tamamlanan projeleri göster/gizle
+function toggleCompletedProjects() {
+    const projectsList = document.getElementById('projectsList');
+    const completedProjectsLink = document.getElementById('completedProjectsLink');
+    const isShowingCompleted = completedProjectsLink.classList.contains('active');
+    
+    // Link durumunu güncelle
+    completedProjectsLink.classList.toggle('active');
+    
+    // Projeleri filtrele
+    const projectCards = projectsList.querySelectorAll('.project-card');
+    projectCards.forEach(card => {
+        const cardContainer = card.closest('.col-md-4');
+        const isCompleted = card.querySelector('.badge.bg-success') !== null;
+        
+        if (isShowingCompleted) {
+            // Tüm projeleri göster
+            cardContainer.style.display = '';
+        } else {
+            // Sadece tamamlanan projeleri göster
+            cardContainer.style.display = isCompleted ? '' : 'none';
+        }
+    });
+    
+    // Başlığı güncelle
+    const pageTitle = document.querySelector('.container.mt-4 h1');
+    if (pageTitle) {
+        pageTitle.textContent = isShowingCompleted ? 'Projelerim' : 'Tamamlanan Projeler';
+    }
+}
+
+// Görev durumunu güncelle
+async function updateTaskStatus(taskId, newStatus) {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const response = await fetch(`${API_URL.tasks}/${taskId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!response.ok) {
+            throw new Error('Görev durumu güncellenemedi');
+        }
+
+        // Görev başarıyla güncellendi
+        const updatedTask = await response.json();
+        console.log('Görev güncellendi:', updatedTask);
+
+        // Projeleri yeniden yükle
+        loadProjects();
+
+        // Başarı mesajı göster
+        showAlert('Görev durumu başarıyla güncellendi', 'success');
+    } catch (error) {
+        console.error('Görev durumu güncellenirken hata:', error);
+        showAlert('Görev durumu güncellenirken bir hata oluştu', 'danger');
     }
 }

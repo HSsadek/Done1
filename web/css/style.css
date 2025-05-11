@@ -706,3 +706,85 @@ body {
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     padding: 15px 20px;
 }
+
+.project-detail-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 90%;
+    max-width: 400px;
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.project-detail-panel.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.project-detail-panel .card {
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.project-detail-panel .task-stats .bg-light {
+    background-color: #f8f9fa !important;
+    transition: all 0.2s ease;
+}
+
+.project-detail-panel .task-stats .bg-light:hover {
+    background-color: #e9ecef !important;
+    transform: translateY(-2px);
+}
+
+.project-detail-panel .progress {
+    border-radius: 1rem;
+    background-color: #e9ecef;
+}
+
+.project-detail-panel .progress-bar {
+    border-radius: 1rem;
+    transition: width 0.6s ease;
+}
+
+.project-detail-panel .btn-primary {
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.project-detail-panel .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+}
+
+.project-detail-panel .btn-close {
+    padding: 0.5rem;
+    margin: -0.5rem;
+    transition: all 0.2s ease;
+}
+
+.project-detail-panel .btn-close:hover {
+    transform: rotate(90deg);
+}
+
+.project-detail-panel::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.project-detail-panel.show::before {
+    opacity: 1;
+}

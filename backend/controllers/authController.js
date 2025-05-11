@@ -81,13 +81,23 @@ exports.updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    // Update name and profileImage if provided
+
+    // Update fields if provided
     if (req.body.name) user.name = req.body.name;
+    if (req.body.email) user.email = req.body.email;
+    if (req.body.role) user.role = req.body.role;
     if (req.body.profileImage) user.profileImage = req.body.profileImage;
+    if (req.body.password) user.password = req.body.password;
+
+    // Save changes
     await user.save();
-    console.log('Profil güncellendi:', user);
-    res.json({ message: 'Profil güncellendi', user });
+
+    // Return updated user without password
+    const updatedUser = await User.findById(user._id).select('-password');
+    console.log('Profil güncellendi:', updatedUser);
+    res.json({ message: 'Profil başarıyla güncellendi', user: updatedUser });
   } catch (error) {
+    console.error('Profil güncellenirken hata:', error);
     res.status(500).json({ message: error.message });
   }
 };
