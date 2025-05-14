@@ -5,9 +5,9 @@
 const API_URL = {
     projects: 'http://localhost:5000/api/projects',
     tasks: 'http://localhost:5000/api/tasks',
-    profile: 'http://localhost:5000/api/profile',
+    profile: 'http://localhost:5000/api/auth/profile',
     activities: 'http://localhost:5000/api/activities',
-    users: 'http://localhost:5000/api/users'
+    users: 'http://localhost:5000/api/auth'
 };
 
 // Proje ve görev verileri
@@ -185,7 +185,7 @@ function openTaskEditModal(taskData) {
 }
 
 // Kullanıcı arama fonksiyonu
-function searchUsers() {
+async function searchUsers() {
     console.log('searchUsers fonksiyonu çağrıldı');
     
     const searchInput = document.getElementById('teamMemberInput');
@@ -196,54 +196,63 @@ function searchUsers() {
         return;
     }
     
-    // Yükleniyor mesajı göster
-    searchResultsList.innerHTML = '<li class="list-group-item text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Kullanıcılar yükleniyor...</li>';
-    
-    // Örnek kullanıcı verileri
-    const mockUsers = [
-        { id: '1', name: 'Hussein Sadek', email: 'hussein@example.com', username: 'hsadek' },
-        { id: '2', name: 'Ahmet Yılmaz', email: 'ahmet@example.com', username: 'ayilmaz' },
-        { id: '3', name: 'Ayşe Demir', email: 'ayse@example.com', username: 'ademir' },
-        { id: '4', name: 'Mehmet Kaya', email: 'mehmet@example.com', username: 'mkaya' },
-        { id: '5', name: 'Zeynep Çelik', email: 'zeynep@example.com', username: 'zcelik' }
-    ];
-    
     // Arama sorgusu
     const query = searchInput.value.trim();
     
-    // Kullanıcıları filtrele
-    let filteredUsers = mockUsers;
-    if (query.length >= 2) {
-        filteredUsers = mockUsers.filter(user => {
-            const searchTerms = query.toLowerCase();
-            return (
-                (user.name && user.name.toLowerCase().includes(searchTerms)) ||
-                (user.email && user.email.toLowerCase().includes(searchTerms)) ||
-                (user.username && user.username.toLowerCase().includes(searchTerms))
-            );
-        });
+    if (query.length < 2) {
+        searchResultsList.innerHTML = '<li class="list-group-item text-center text-muted">En az 2 karakter girin</li>';
+        return;
     }
     
-    // Kısa bir gecikme ekle (yükleme efekti için)
-    setTimeout(() => {
+    // Yükleniyor mesajı göster
+    searchResultsList.innerHTML = '<li class="list-group-item text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Kullanıcılar yükleniyor...</li>';
+    
+    try {
+        // API'den kullanıcıları getir
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL.users}/search?query=${encodeURIComponent(query)}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Kullanıcı arama işlemi başarısız oldu');
+        }
+        
+        const users = await response.json();
+        console.log('API\'den gelen kullanıcılar:', users);
+        
         // Arama sonuçlarını temizle
         searchResultsList.innerHTML = '';
         
-        console.log('Bulunan kullanıcılar:', filteredUsers);
-        
         // Sonuçları göster
-        if (filteredUsers.length === 0) {
+        if (!users || users.length === 0) {
             searchResultsList.innerHTML = '<li class="list-group-item text-center text-muted">Kullanıcı bulunamadı</li>';
             return;
         }
         
         // Kullanıcıları göster
-        filteredUsers.forEach(user => {
+        users.forEach(user => {
             const userItem = document.createElement('li');
             userItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+            // Kullanıcı ID'sini al (backend'den gelen veride id veya _id olabilir)
+            const userId = user.id || user._id || `temp_${Date.now()}`;
+            
+            // Kullanıcı fotoğrafı için URL al
+            const profileImage = user.profileImage || user.avatar || user.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name || user.email || user.username) + '&background=random';
+            
             userItem.innerHTML = `
-                <span>${user.name || user.email || user.username}</span>
-                <button class="btn btn-sm btn-primary add-user-btn" data-user-id="${user.id}" data-user-name="${user.name || user.email || user.username}">Ekle</button>
+                <div class="d-flex align-items-center">
+                    <img src="${profileImage}" class="rounded-circle me-2" width="32" height="32" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.email || user.username)}&background=random'">
+                    <span>${user.name || user.email || user.username}</span>
+                </div>
+                <button class="btn btn-sm btn-primary add-user-btn" 
+                    data-user-id="${userId}" 
+                    data-user-name="${user.name || user.email || user.username}"
+                    data-user-image="${profileImage}">
+                    Ekle
+                </button>
             `;
             
             searchResultsList.appendChild(userItem);
@@ -253,13 +262,15 @@ function searchUsers() {
             addButton.addEventListener('click', function() {
                 const userId = this.getAttribute('data-user-id');
                 const userName = this.getAttribute('data-user-name');
+                const userImage = this.getAttribute('data-user-image');
                 
-                console.log(`Ekip üyesi ekleniyor: ID=${userId}, Name=${userName}`);
+                console.log(`Ekip üyesi ekleniyor: ID=${userId}, Name=${userName}, Image=${userImage}`);
                 
                 // Kullanıcıyı ekip üyeleri listesine ekle
                 addTeamMemberToBadgeList({
                     id: userId,
-                    name: userName
+                    name: userName,
+                    image: userImage
                 }, 'teamMembersList');
                 
                 // Kullanıcı eklendikten sonra arama alanını temizle
@@ -272,7 +283,75 @@ function searchUsers() {
                 showAlert(`${userName} ekip üyesi olarak eklendi`, 'success');
             });
         });
-    }, 300); // 300ms gecikme ile yükleme efekti oluştur
+    } catch (error) {
+        console.error('Kullanıcı arama hatası:', error);
+        searchResultsList.innerHTML = `<li class="list-group-item text-center text-danger">Hata: ${error.message}</li>`;
+        
+        // API bağlantısı yoksa örnek kullanıcılarla devam et
+        setTimeout(() => {
+            searchResultsList.innerHTML = '<li class="list-group-item text-center text-warning">API bağlantısı yok, örnek kullanıcılar gösteriliyor</li>';
+            
+            // Örnek kullanıcı verileri
+            const mockUsers = [
+                { id: '1', name: 'Hussein Sadek', email: 'hussein@example.com', username: 'hsadek' },
+                { id: '2', name: 'Ahmet Yılmaz', email: 'ahmet@example.com', username: 'ayilmaz' },
+                { id: '3', name: 'Ayşe Demir', email: 'ayse@example.com', username: 'ademir' },
+                { id: '4', name: 'Mehmet Kaya', email: 'mehmet@example.com', username: 'mkaya' },
+                { id: '5', name: 'Zeynep Çelik', email: 'zeynep@example.com', username: 'zcelik' }
+            ];
+            
+            // Kullanıcıları filtrele
+            const filteredUsers = mockUsers.filter(user => {
+                const searchTerms = query.toLowerCase();
+                return (
+                    (user.name && user.name.toLowerCase().includes(searchTerms)) ||
+                    (user.email && user.email.toLowerCase().includes(searchTerms)) ||
+                    (user.username && user.username.toLowerCase().includes(searchTerms))
+                );
+            });
+            
+            if (filteredUsers.length === 0) {
+                searchResultsList.innerHTML += '<li class="list-group-item text-center text-muted">Kullanıcı bulunamadı</li>';
+                return;
+            }
+            
+            // Kullanıcıları göster
+            filteredUsers.forEach(user => {
+                const userItem = document.createElement('li');
+                userItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                userItem.innerHTML = `
+                    <span>${user.name || user.email || user.username}</span>
+                    <button class="btn btn-sm btn-primary add-user-btn" data-user-id="${user.id}" data-user-name="${user.name || user.email || user.username}">Ekle</button>
+                `;
+                
+                searchResultsList.appendChild(userItem);
+                
+                // "Ekle" butonuna tıklama olayı ekle
+                const addButton = userItem.querySelector('.add-user-btn');
+                addButton.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-user-id');
+                    const userName = this.getAttribute('data-user-name');
+                    
+                    console.log(`Ekip üyesi ekleniyor: ID=${userId}, Name=${userName}`);
+                    
+                    // Kullanıcıyı ekip üyeleri listesine ekle
+                    addTeamMemberToBadgeList({
+                        id: userId,
+                        name: userName
+                    }, 'teamMembersList');
+                    
+                    // Kullanıcı eklendikten sonra arama alanını temizle
+                    document.getElementById('teamMemberInput').value = '';
+                    
+                    // Arama sonuçlarını temizle
+                    searchResultsList.innerHTML = '';
+                    
+                    // Kullanıcı eklendi bildirimini göster
+                    showAlert(`${userName} ekip üyesi olarak eklendi`, 'success');
+                });
+            });
+        }, 1000);
+    }
 }
 
 // Ekip üyesi ekle
@@ -737,14 +816,11 @@ function updateProjectTeam() {
     
     let ownerBadge = '';
     if (currentProject.owner && (typeof currentProject.owner === 'object')) {
-        const ownerName = currentProject.owner.name || currentProject.owner.email || 'Sahip';
-        const ownerPhoto = currentProject.owner.profilePhoto || '';
+        const ownerName = currentProject.owner.name || currentProject.owner.email || currentProject.owner.username || 'Sahip';
+        const ownerPhoto = currentProject.owner.profilePhoto || currentProject.owner.profileImage || currentProject.owner.avatar || currentProject.owner.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(ownerName) + '&background=random';
         ownerBadge = `
             <span class='badge bg-warning text-dark me-2 d-flex align-items-center'>
-                ${ownerPhoto ? 
-                    `<img src="${ownerPhoto}" class="rounded-circle me-1" style="width:20px;height:20px;object-fit:cover;">` : 
-                    `<span class="rounded-circle bg-dark text-white d-inline-flex align-items-center justify-content-center me-1" style="width:20px;height:20px;font-size:12px;">${ownerName[0].toUpperCase()}</span>`
-                }
+                <img src="${ownerPhoto}" class="rounded-circle me-1" style="width:20px;height:20px;object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(ownerName)}&background=random';">
                 <i class="bi bi-person-badge ms-1"></i> Proje Sahibi: ${ownerName}
             </span>`;
     } else if (currentProject.owner) {
@@ -762,18 +838,15 @@ function updateProjectTeam() {
                 if (typeof member === 'string') {
                     memberName = member;
                 } else {
-                    memberName = member.name || member.email || 'Kullanıcı';
-                    memberPhoto = member.profilePhoto || '';
+                    memberName = member.name || member.email || member.username || 'Kullanıcı';
+                    memberPhoto = member.profilePhoto || member.profileImage || member.avatar || member.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(memberName) + '&background=random';
                 }
                 
                 return `
                     <div class='col'>
                         <div class="card h-100 shadow-sm team-card team-card-hover">
                             <div class="card-body d-flex flex-column align-items-center justify-content-center">
-                                ${memberPhoto ? 
-                                    `<img src="${memberPhoto}" class="rounded-circle mb-2" style="width:48px;height:48px;object-fit:cover;">` : 
-                                    `<span class='rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-2' style='width:48px;height:48px;font-size:20px;font-weight:bold;'>${memberName[0].toUpperCase()}</span>`
-                                }
+                                <img src="${memberPhoto}" class="rounded-circle mb-2" style="width:48px;height:48px;object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(memberName)}&background=random';">
                                 <h6 class="mb-0">${memberName}</h6>
                             </div>
                         </div>
@@ -1332,7 +1405,9 @@ async function saveTask() {
 
 // Görev atama seçeneklerini güncelle
 function updateTaskAssigneeOptions() {
-    const team = currentProject.teamMembers || [];
+    // Backend 'team' alanını kullanıyor, frontend bazen 'teamMembers' kullanıyor
+    // Her iki alanı da kontrol edelim
+    const team = currentProject.team || currentProject.teamMembers || [];
     const assigneeSelects = document.querySelectorAll('.task-assignee');
     
     console.log('Mevcut ekip üyeleri:', team); // Debug için log
@@ -1777,8 +1852,59 @@ async function openAddTeamMemberModal() {
         return;
     }
     
+    // Mevcut ekip üyelerini göster
     teamMembersList.innerHTML = '';
-    console.log('Ekip üyeleri listesi temizlendi');
+    console.log('Ekip üyeleri listesi hazırlanıyor');
+    
+    // Mevcut ekip üyelerini al ve görüntüle
+    if (currentProject && (currentProject.team || currentProject.teamMembers)) {
+        const teamMembers = currentProject.team || currentProject.teamMembers || [];
+        console.log('Mevcut ekip üyeleri:', teamMembers);
+        
+        // Eğer ekip üyeleri ID listesi ise, kullanıcı bilgilerini getir
+        if (teamMembers.length > 0 && typeof teamMembers[0] !== 'object') {
+            // API'den kullanıcı bilgilerini getir
+            try {
+                const token = localStorage.getItem('token');
+                // Her bir ekip üyesini görüntüle
+                teamMembers.forEach(async (memberId) => {
+                    try {
+                        const response = await fetch(`${API_URL.users}/${memberId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const user = await response.json();
+                            // Kullanıcıyı badge listesine ekle
+                            addTeamMemberToBadgeList({
+                                id: user._id || user.id,
+                                name: user.name || user.email || user.username
+                            }, 'teamMembersList');
+                        }
+                    } catch (error) {
+                        console.error(`Kullanıcı bilgisi alınırken hata: ${memberId}`, error);
+                        // Hata durumunda sadece ID ile ekle
+                        addTeamMemberToBadgeList({
+                            id: memberId,
+                            name: `Kullanıcı #${memberId.substring(0, 6)}`
+                        }, 'teamMembersList');
+                    }
+                });
+            } catch (error) {
+                console.error('Ekip üyeleri yüklenirken hata:', error);
+            }
+        } else if (teamMembers.length > 0) {
+            // Ekip üyeleri zaten obje ise, doğrudan görüntüle
+            teamMembers.forEach(member => {
+                addTeamMemberToBadgeList({
+                    id: member._id || member.id,
+                    name: member.name || member.email || member.username
+                }, 'teamMembersList');
+            });
+        }
+    }
     
     // Arama sonuçlarını temizle
     const userSearchResults = document.getElementById('userSearchResults');
@@ -1842,9 +1968,17 @@ async function openAddTeamMemberModal() {
 
 // Ekip üyesini badge listesine ekle
 function addTeamMemberToBadgeList(member, listId) {
-    if (!member || !member.id) {
+    if (!member) {
         console.error('Geçersiz üye bilgisi:', member);
         return;
+    }
+    
+    // API'den gelen kullanıcı verilerinde id yoksa _id kullan veya varsayılan değer ata
+    if (!member.id && member._id) {
+        member.id = member._id;
+    } else if (!member.id) {
+        // Eğer hiç ID yoksa, geçici bir ID oluştur
+        member.id = 'temp_' + Date.now();
     }
     
     const membersList = document.getElementById(listId);
@@ -1864,18 +1998,38 @@ function addTeamMemberToBadgeList(member, listId) {
     
     // Yeni badge oluştur
     const badge = document.createElement('span');
-    badge.className = 'badge bg-primary me-2 mb-2 p-2';
+    badge.className = 'badge bg-primary me-2 mb-2 p-2 d-flex align-items-center';
     badge.setAttribute('data-member-id', member.id);
-    badge.innerHTML = `
-        ${member.name}
-        <button type="button" class="btn-close btn-close-white ms-2" aria-label="Kaldır" style="font-size: 0.5rem;"></button>
-    `;
+    
+    // Kullanıcı fotoğrafı için URL al
+    const profileImage = member.image || member.profileImage || member.avatar || member.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(member.name) + '&background=random';
+    
+    // Fotoğraf için img elementi oluştur
+    const userImage = document.createElement('img');
+    userImage.src = profileImage;
+    userImage.className = 'rounded-circle me-1';
+    userImage.width = 24;
+    userImage.height = 24;
+    userImage.onerror = function() { this.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(member.name) + '&background=random'; };
+    badge.appendChild(userImage);
+    
+    // İsim için span elementi oluştur
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = member.name;
+    badge.appendChild(nameSpan);
+    
+    // Kaldır butonu oluştur
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'btn-close btn-close-white ms-2';
+    removeButton.setAttribute('aria-label', 'Kaldır');
+    removeButton.style.fontSize = '0.5rem';
+    badge.appendChild(removeButton);
     
     // Badge'i listeye ekle
     membersList.appendChild(badge);
     
     // Kaldır butonuna tıklama olayı ekle
-    const removeButton = badge.querySelector('.btn-close');
     removeButton.addEventListener('click', function() {
         badge.remove();
     });
@@ -1901,7 +2055,15 @@ async function saveTeamMembers() {
         
         teamMemberBadges.forEach(badge => {
             const memberId = badge.dataset.memberId;
-            const memberName = badge.querySelector('span').textContent;
+            const spanElement = badge.querySelector('span');
+            
+            // Span elementi kontrolü
+            if (!spanElement) {
+                console.warn('Badge içinde span elementi bulunamadı:', badge.innerHTML);
+                return;
+            }
+            
+            const memberName = spanElement.textContent;
             console.log('Ekip üyesi bulundu:', memberId, memberName);
             
             if (memberId) {
@@ -1920,11 +2082,26 @@ async function saveTeamMembers() {
             return;
         }
         
-        // Mevcut projeyi güncelle - doğrudan yeni ekip üyelerini kullan
-        // Bu şekilde seçtiğimiz üyeler direkt olarak projeye eklenir
+        // Mevcut projeyi güncelle - mevcut ve yeni ekip üyelerini birleştir
+        // Backend 'team' alanını kullanıyor ve sadece ID'leri bekliyor
+        // Geçersiz ID'leri filtrele (undefined veya null olanlar)
+        const validTeamMemberIds = teamMembers
+            .filter(member => member.id && member.id !== 'undefined')
+            .map(member => member.id);
+        
+        // Mevcut ekip üyelerini al
+        const existingTeamIds = currentProject.team || [];
+        
+        // Mevcut ve yeni ekip üyelerini birleştir (tekrar etmeyecek şekilde)
+        const allTeamIds = [...new Set([...existingTeamIds, ...validTeamMemberIds])];
+        
+        console.log('Mevcut ekip üyeleri:', existingTeamIds);
+        console.log('Yeni eklenen ekip üyeleri:', validTeamMemberIds);
+        console.log('Birleştirilmiş ekip üyeleri:', allTeamIds);
+            
         const updatedProject = {
             ...currentProject,
-            teamMembers: teamMembers
+            team: allTeamIds
         };
         
         console.log('Güncellenecek proje:', updatedProject);
@@ -1958,15 +2135,156 @@ async function saveTeamMembers() {
         updateTaskAssigneeOptions();
         
         // Modalı kapat
-        const addTeamMemberModal = bootstrap.Modal.getInstance(document.getElementById('addTeamMemberModal'));
-        addTeamMemberModal.hide();
+        const modalElement = document.getElementById('addTeamMemberModal');
+        if (modalElement) {
+            // Bootstrap 5 yöntemi ile modalı kapat
+            const addTeamMemberModal = bootstrap.Modal.getInstance(modalElement);
+            if (addTeamMemberModal) {
+                addTeamMemberModal.hide();
+                console.log('Modal başarıyla kapatıldı (Bootstrap 5)');
+            }
+        }
         
         // Başarı mesajı göster
         showAlert('Ekip üyeleri başarıyla güncellendi', 'success');
         
+        // Modern loading göstergesini sayfanın ortasında göster
+        // Modern pulse animasyonu için CSS ekle
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse-animation {
+                0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7); transform: scale(0.95); }
+                70% { box-shadow: 0 0 0 15px rgba(13, 110, 253, 0); transform: scale(1); }
+                100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); transform: scale(0.95); }
+            }
+            .loading-pulse {
+                animation: pulse-animation 1.5s infinite;
+            }
+            .loading-dots span {
+                display: inline-block;
+                animation: loading-dots 1.4s infinite;
+            }
+            .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+            .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+            @keyframes loading-dots {
+                0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+                40% { transform: scale(1); opacity: 1; }
+            }
+            .global-loading-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background-color: rgba(255, 255, 255, 0.85);
+                backdrop-filter: blur(5px);
+                z-index: 9999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Sayfanın tamamını kaplayan overlay oluştur
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'global-loading-overlay';
+        loadingOverlay.innerHTML = `
+            <div class="text-center p-4" style="background-color: white; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.08);">
+                <div class="d-flex justify-content-center mb-3">
+                    <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center loading-pulse" 
+                         style="width: 60px; height: 60px;">
+                        <i class="bi bi-people-fill text-white" style="font-size: 24px;"></i>
+                    </div>
+                </div>
+                <h5 class="mb-2">Ekip üyeleri güncelleniyor</h5>
+                <div class="loading-dots">
+                    <span class="mx-1 fs-4">.</span>
+                    <span class="mx-1 fs-4">.</span>
+                    <span class="mx-1 fs-4">.</span>
+                </div>
+            </div>
+        `;
+        
+        // Body'ye ekle
+        document.body.appendChild(loadingOverlay);
+        
+        // Başarı mesajını gösterdikten sonra sayfayı yenile
+        setTimeout(() => {
+            console.log('Sayfa yenileniyor...');
+            window.location.reload();
+        }, 1500); // 1.5 saniye sonra sayfayı yenile (kullanıcının başarı mesajını görmesi için)
+        
     } catch (error) {
         console.error('Ekip üyeleri güncelleme hatası:', error);
         showAlert('Ekip üyeleri güncellenirken bir hata oluştu: ' + error.message, 'danger');
+    }
+}
+
+// Ekip üyelerini görüntüleme fonksiyonu
+async function updateTeamMembersDisplay(teamIds) {
+    console.log('updateTeamMembersDisplay fonksiyonu çağrıldı:', teamIds);
+    
+    // Ekip üyeleri bölümünü bul
+    const teamMembersSection = document.querySelector('.team-members-section');
+    if (!teamMembersSection) {
+        console.error('Ekip üyeleri bölümü bulunamadı');
+        return;
+    }
+    
+    // Ekip üyeleri listesini bul veya oluştur
+    let teamMembersList = teamMembersSection.querySelector('.team-members-list');
+    if (!teamMembersList) {
+        teamMembersList = document.createElement('div');
+        teamMembersList.className = 'team-members-list d-flex flex-wrap gap-2 mt-3';
+        teamMembersSection.appendChild(teamMembersList);
+    }
+    
+    // Listeyi temizle
+    teamMembersList.innerHTML = '';
+    
+    // Ekip üyesi yoksa mesaj göster
+    if (!teamIds || teamIds.length === 0) {
+        teamMembersList.innerHTML = '<p class="text-muted">Henüz ekip üyesi eklenmemiş</p>';
+        return;
+    }
+    
+    // Her bir ekip üyesini görüntüle
+    const token = localStorage.getItem('token');
+    
+    for (const memberId of teamIds) {
+        try {
+            // API'den kullanıcı bilgilerini getir
+            const response = await fetch(`${API_URL.users}/${memberId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const user = await response.json();
+                // Kullanıcı badge'ini oluştur
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-primary me-2 mb-2 p-2';
+                badge.setAttribute('data-member-id', user._id || user.id);
+                
+                // İsim için span elementi oluştur
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = user.name || user.email || user.username;
+                badge.appendChild(nameSpan);
+                
+                teamMembersList.appendChild(badge);
+            } else {
+                console.error(`Kullanıcı bilgisi alınamadı: ${memberId}`);
+                // Hata durumunda basit bir badge göster
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-secondary me-2 mb-2 p-2';
+                badge.textContent = `Kullanıcı #${memberId.substring(0, 6)}`;
+                teamMembersList.appendChild(badge);
+            }
+        } catch (error) {
+            console.error(`Kullanıcı bilgisi alınırken hata: ${memberId}`, error);
+        }
     }
 }
 

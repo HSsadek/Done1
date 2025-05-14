@@ -1,8 +1,6 @@
 import axios from 'axios';
 
-
-const API_URL = 'http://10.14.11.198:5000/api';///ip adressi her seferinde değiştirilecektir 
-
+const API_URL = 'http://10.14.8.180:5000/api'; ///ip adressi her seferinde değiştirilecektir
 
 const api = axios.create({
   baseURL: API_URL,
@@ -30,14 +28,14 @@ api.interceptors.request.use(
       method: config.method.toUpperCase(),
       url: config.url,
       data: config.data,
-      headers: config.headers
+      headers: config.headers,
     }); // Debug için
     return config;
   },
   (error) => {
     console.error('Request Error:', error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor - hata yönetimi için
@@ -45,7 +43,7 @@ api.interceptors.response.use(
   (response) => {
     console.log('Response:', {
       status: response.status,
-      data: response.data
+      data: response.data,
     }); // Debug için
     return response;
   },
@@ -53,7 +51,7 @@ api.interceptors.response.use(
     console.error('Response Error:', {
       message: error.message,
       response: error.response?.data,
-      status: error.response?.status
+      status: error.response?.status,
     });
 
     if (error.response?.status === 401) {
@@ -68,7 +66,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export const authAPI = {
@@ -120,18 +118,25 @@ export const authAPI = {
   },
   getUsers: async () => {
     try {
-      const response = await api.get('/auth/users');  // /users yerine /auth/users olarak değiştirildi
+      const response = await api.get('/auth/users'); // /users yerine /auth/users olarak değiştirildi
       return response;
     } catch (error) {
       if (!error.response) {
         // Network hatası veya timeout
-        throw new Error('Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.');
+        throw new Error(
+          'Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.',
+        );
       } else if (error.response.status === 401) {
         // Yetkilendirme hatası
-        throw new Error('Bu işlem için yetkiniz yok. Lütfen tekrar giriş yapın.');
+        throw new Error(
+          'Bu işlem için yetkiniz yok. Lütfen tekrar giriş yapın.',
+        );
       } else {
         // Diğer API hataları
-        throw new Error(error.response?.data?.message || 'Kullanıcılar yüklenirken bir hata oluştu');
+        throw new Error(
+          error.response?.data?.message ||
+            'Kullanıcılar yüklenirken bir hata oluştu',
+        );
       }
     }
   },
@@ -143,26 +148,31 @@ export const projectAPI = {
   createProject: (projectData) => api.post('/projects', projectData),
   updateProject: (id, projectData) => api.put(`/projects/${id}`, projectData),
   deleteProject: (id) => api.delete(`/projects/${id}`),
-  
+
   // Proje ekip üyeleri
   getProjectMembers: (projectId) => api.get(`/projects/${projectId}/members`),
-  addProjectMember: (projectId, userId) => api.post(`/projects/${projectId}/members`, { userId }),
-  removeProjectMember: (projectId, userId) => api.delete(`/projects/${projectId}/members/${userId}`),
+  addProjectMember: (projectId, userId) =>
+    api.post(`/projects/${projectId}/members`, { userId }),
+  removeProjectMember: (projectId, userId) =>
+    api.delete(`/projects/${projectId}/members/${userId}`),
 };
 
 export const taskAPI = {
   getProjectTasks: (projectId) => api.get(`/projects/${projectId}/tasks`),
   getTaskById: (taskId) => api.get(`/tasks/${taskId}`),
-  createTask: (projectId, taskData) => api.post(`/projects/${projectId}/tasks`, taskData),
+  createTask: (projectId, taskData) =>
+    api.post(`/projects/${projectId}/tasks`, taskData),
   updateTask: (taskId, taskData) => api.put(`/tasks/${taskId}`, taskData),
   deleteTask: (taskId) => api.delete(`/tasks/${taskId}`),
-  
+
   // Görev atama
-  assignTask: (taskId, userId) => api.put(`/tasks/${taskId}/assign`, { userId }),
+  assignTask: (taskId, userId) =>
+    api.put(`/tasks/${taskId}/assign`, { userId }),
   unassignTask: (taskId) => api.put(`/tasks/${taskId}/unassign`),
-  
+
   // Görev durumu
-  updateTaskStatus: (projectId, taskId, status) => api.put(`/projects/${projectId}/tasks/${taskId}`, { status }),
+  updateTaskStatus: (projectId, taskId, status) =>
+    api.put(`/projects/${projectId}/tasks/${taskId}`, { status }),
 };
 
 export default api;

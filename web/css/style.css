@@ -84,6 +84,10 @@ body {
     padding: 12px 0;
 }
 
+.search-form {
+    width: 40%;
+}
+
 .navbar-dark.bg-primary {
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
 }
@@ -688,6 +692,10 @@ body {
     box-shadow: var(--box-shadow);
     border: none;
     animation: fadeIn 0.5s ease;
+}
+
+.alert-container {
+    z-index: 5000;
 }
 
 /* Modal Stilleri */

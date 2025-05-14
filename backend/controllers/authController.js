@@ -184,7 +184,7 @@ exports.searchUsers = async (req, res) => {
                 { email: { $regex: searchQuery, $options: 'i' } },
                 { name: { $regex: searchQuery, $options: 'i' } }
             ]
-        }).select('username name email');
+        }).select('username name email profileImage avatar photo');
 
         res.json(users);
     } catch (error) {
