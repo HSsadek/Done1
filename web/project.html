@@ -76,7 +76,7 @@
               <a class="nav-link" href="index.html">Dashboard</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Profil</a>
+              <a class="nav-link" href="profile.html">Profil</a>
             </li>
           </ul>
         </div>
@@ -207,72 +207,83 @@
     </template>
 
     <!-- Add Task Modal -->
-    <div class="modal fade" id="addTaskModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Yeni Görev Ekle</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
+    <!-- Yeni Görev Ekleme Modalı -->
+    <div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title">
+              <i class="bi bi-plus-circle me-1"></i>Yeni Görev Ekle
+            </h5>
           </div>
-          <div class="modal-body">
+          <div class="modal-body p-4">
             <form id="addTaskForm">
-              <div class="mb-3">
-                <label for="taskTitle" class="form-label">Görev Başlığı</label>
+              <div class="mb-4">
+                <label for="taskTitle" class="form-label fw-bold">
+                  <i class="bi bi-card-heading me-1 text-primary"></i>Görev Başlığı
+                </label>
                 <input
                   type="text"
-                  class="form-control"
+                  class="form-control form-control-lg"
                   id="taskTitle"
+                  placeholder="Görev başlığını girin"
                   required
                 />
               </div>
-              <div class="mb-3">
-                <label for="taskDescription" class="form-label">Açıklama</label>
+              
+              <div class="mb-4">
+                <label for="taskDescription" class="form-label fw-bold">
+                  <i class="bi bi-card-text me-1 text-primary"></i>Açıklama
+                </label>
                 <textarea
                   class="form-control"
                   id="taskDescription"
                   rows="3"
+                  placeholder="Görev detaylarını açıklayın"
                 ></textarea>
               </div>
-              <div class="row mb-3">
+              
+              <div class="row mb-4">
                 <div class="col-md-6">
-                  <label for="taskStartDate" class="form-label"
-                    >Başlangıç Tarihi</label
-                  >
-                  <input type="date" class="form-control" id="taskStartDate" />
+                  <label for="taskStartDate" class="form-label fw-bold">
+                    <i class="bi bi-calendar-check me-1 text-primary"></i>Başlangıç Tarihi
+                  </label>
+                  <input 
+                    type="date" 
+                    class="form-control" 
+                    id="taskStartDate" 
+                  />
                 </div>
                 <div class="col-md-6">
-                  <label for="taskEndDate" class="form-label"
-                    >Bitiş Tarihi</label
-                  >
-                  <input type="date" class="form-control" id="taskEndDate" />
+                  <label for="taskEndDate" class="form-label fw-bold">
+                    <i class="bi bi-calendar-event me-1 text-primary"></i>Bitiş Tarihi
+                  </label>
+                  <input 
+                    type="date" 
+                    class="form-control" 
+                    id="taskEndDate" 
+                  />
                 </div>
               </div>
-              <div class="mb-3">
-                <label for="taskAssignee" class="form-label"
-                  >Görev Ataması</label
-                >
-                <select class="form-select" id="taskAssignee">
-                  <option value="">Seçiniz</option>
-                  <!-- Team members will be added here dynamically -->
+              
+              <!-- Durum alanı kaldırıldı -->
+              
+              <div class="mb-4">
+                <label for="taskAssignee" class="form-label fw-bold">
+                  <i class="bi bi-person me-1 text-primary"></i>Görev Ataması
+                </label>
+                <select class="form-select task-assignee" id="taskAssignee">
+                  <option value="">Ekip üyesi seçin</option>
+                  <!-- Ekip üyeleri burada dinamik olarak listelenecek -->
                 </select>
               </div>
+              
+              <!-- Öncelik alanı kaldırıldı -->
             </form>
           </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              İptal
-            </button>
-            <button type="button" class="btn btn-primary" id="saveTaskBtn">
-              Kaydet
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-primary w-100" id="saveTaskBtn">
+              <i class="bi bi-check-circle me-1"></i>Görevi Kaydet
             </button>
           </div>
         </div>
@@ -442,12 +453,6 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Projeyi Düzenle</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
           </div>
           <div class="modal-body">
             <form id="editProjectForm">
@@ -495,14 +500,7 @@
             </form>
           </div>
           <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              İptal
-            </button>
-            <button type="button" class="btn btn-primary" id="saveProjectBtn">
+            <button type="button" class="btn btn-primary w-100" id="saveProjectBtn">
               Kaydet
             </button>
           </div>
@@ -521,12 +519,6 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Ekip Üyesi Ekle</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
           </div>
           <div class="modal-body">
             <div class="mb-3">
@@ -552,14 +544,7 @@
           <div class="modal-footer">
             <button
               type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              İptal
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
+              class="btn btn-primary w-100"
               id="saveTeamMembersBtn"
             >
               Kaydet

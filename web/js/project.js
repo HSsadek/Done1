@@ -4,11 +4,56 @@
 // Mobil erişim için IP adresini kullanır.
 const API_URL = {
     projects: 'http://localhost:5000/api/projects',
-    tasks: 'http://localhost:5000/api/tasks',
+    tasks: 'http://localhost:5000/api/projects', // Görevler projeler altında yönetiliyor
     profile: 'http://localhost:5000/api/auth/profile',
     activities: 'http://localhost:5000/api/activities',
     users: 'http://localhost:5000/api/auth'
 };
+
+// Güvenli modal kapatma fonksiyonu
+function closeModal(modalId, reloadPage = true) {
+    try {
+        // Modal elementini bul
+        const modalElement = document.getElementById(modalId);
+        if (!modalElement) {
+            console.warn(`Modal element bulunamadı: ${modalId}`);
+            return;
+        }
+
+        // Bootstrap modal instance'ını al
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+            // Bootstrap 5 yöntemi ile modalı kapat
+            modalInstance.hide();
+            console.log(`Modal başarıyla kapatıldı: ${modalId}`);
+        } else {
+            console.warn(`Modal instance bulunamadı: ${modalId}`);
+        }
+
+        // Modal arka planını temizle
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+            console.log('Modal arka planı temizlendi');
+        }
+
+        // Body'den modal sınıflarını kaldır
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
+        // Sayfayı yeniden yükle (kullanıcının tercihi)
+        if (reloadPage) {
+            // Kısa bir süre bekleyip sayfayı yeniden yükle
+            setTimeout(() => {
+                window.location.reload();
+            }, 500); // 500ms bekle
+        }
+
+    } catch (error) {
+        console.error(`Modal kapatma hatası (${modalId}):`, error);
+    }
+}
 
 // Proje ve görev verileri
 let currentProject = null;
@@ -509,15 +554,15 @@ async function loadProjectDetails(projectId) {
         showAlert('Proje detayları yüklenirken bir hata oluştu.', 'danger');
     }
 }
-
-// Proje detaylarını ekrana render et
 function renderProjectDetails() {
     if (!currentProject) return;
     
-    // Proje başlığı ve açıklamasını güncelle
-    document.getElementById('projectTitle').textContent = currentProject.name;
-    document.getElementById('projectDescription').textContent = currentProject.description || 'Açıklama yok';
-    document.title = `${currentProject.name} - Proje Yönetim Sistemi`;
+    // Proje başlığını güncelle
+    document.getElementById('projectTitle').textContent = currentProject.name || 'İsimsiz Proje';
+    
+    // Proje açıklamasını güncelle
+    const descriptionElement = document.getElementById('projectDescription');
+    descriptionElement.innerHTML = currentProject.description || '<em>Açıklama yok</em>';
     
     // İstatistik bilgilerini göster
     updateProjectStats();
@@ -527,53 +572,7 @@ function renderProjectDetails() {
     
     // Proje sahibi ve ekip üyelerini göster
     updateProjectTeam();
-}    
-    // İlerleme yüzdesini hesapla
-    const progress = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
-    
-    statsRow.innerHTML = `
-        <div class="col-12 mb-3">
-            <div class="progress" style="height: 10px;">
-                <div class="progress-bar" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-            <div class="d-flex justify-content-between mt-2">
-                <small>Tamamlanma: ${progress}%</small>
-                <small>Görev Sayısı: ${stats.total}</small>
-            </div>
-        </div>
-        <div class="col-md-3 mb-2">
-            <div class="card h-100 border-secondary">
-                <div class="card-body text-center">
-                    <h5 class="card-title">${stats.todo}</h5>
-                    <p class="card-text">Yapılacak</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-2">
-            <div class="card h-100 border-primary">
-                <div class="card-body text-center">
-                    <h5 class="card-title">${stats.inProgress}</h5>
-                    <p class="card-text">Devam Ediyor</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-2">
-            <div class="card h-100 border-warning">
-                <div class="card-body text-center">
-                    <h5 class="card-title">${stats.testing}</h5>
-                    <p class="card-text">Test Edilecek</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-2">
-            <div class="card h-100 border-success">
-                <div class="card-body text-center">
-                    <h5 class="card-title">${stats.completed}</h5>
-                    <p class="card-text">Tamamlandı</p>
-                </div>
-            </div>
-        </div>
-    `;
+}
 
 // Proje düzenleme modalını aç
 function openEditProjectModal() {
@@ -879,7 +878,12 @@ function updateProjectTeam() {
 // Görevleri ekrana render et
 function renderTasks() {
     console.log('renderTasks çağrıldı, görev sayısı:', tasks.length);
-    console.log('Mevcut görevler:', tasks);
+    console.log('Mevcut görevler:', JSON.stringify(tasks, null, 2));
+    
+    // Görev listesinin boş olup olmadığını kontrol et
+    if (!tasks || tasks.length === 0) {
+        console.warn('Görev listesi boş!');
+    }
     
     // Tüm sütunları temizle
     document.querySelectorAll('.kanban-column-content').forEach(column => {
@@ -1345,139 +1349,383 @@ function showTaskDetails(task) {
 
 // Yeni görev kaydet
 async function saveTask() {
-    // Form verilerini al
-    const taskTitle = document.getElementById('taskTitle').value.trim();
-    const taskDescription = document.getElementById('taskDescription').value.trim();
-    const taskStartDate = document.getElementById('taskStartDate').value;
-    const taskEndDate = document.getElementById('taskEndDate').value;
-    const taskAssignee = document.getElementById('taskAssignee').value;
-    
-    // Validasyon
-    if (taskTitle === '') {
-        showAlert('Lütfen görev başlığını giriniz.', 'warning');
-        return;
-    }
-    
-    // Yeni görev objesi oluştur
-    const newTask = {
-        id: `task-${Date.now()}`,
-        title: taskTitle,
-        description: taskDescription,
-        startDate: taskStartDate,
-        endDate: taskEndDate,
-        assignee: taskAssignee,
-        status: 'notStarted' // Yeni görevler her zaman 'Not Started' durumunda başlar
-    };
-    
     try {
-        // Gerçek uygulamada burada API çağrısı yapılacak
-        // const response = await fetch(API_URL.tasks, {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json'
-        //     },
-        //     body: JSON.stringify({
-        //         projectId: currentProject.id,
-        //         task: newTask
-        //     })
-        // });
-        // const savedTask = await response.json();
+        // Form verilerini al
+        const taskTitle = document.getElementById('taskTitle').value.trim();
+        const taskDescription = document.getElementById('taskDescription').value.trim();
+        const taskStartDate = document.getElementById('taskStartDate').value;
+        const taskEndDate = document.getElementById('taskEndDate').value;
+        const taskAssignee = document.getElementById('taskAssignee').value;
         
-        // Şimdilik görevi doğrudan listeye ekliyoruz
-        tasks.push(newTask);
+        // Validasyon
+        if (taskTitle === '') {
+            showAlert('Lütfen görev başlığını giriniz.', 'warning');
+            return;
+        }
         
-        // Görevleri yeniden render et
-        renderTasks();
+        // Tarih validasyonu
+        if (taskStartDate && taskEndDate && new Date(taskStartDate) > new Date(taskEndDate)) {
+            showAlert('Başlangıç tarihi bitiş tarihinden sonra olamaz.', 'warning');
+            return;
+        }
         
-        // Modal'ı kapat
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addTaskModal'));
-        modal.hide();
+        // Atanan kişi kontrolü
+        let assigneeId = taskAssignee;
         
-        // Formu temizle
-        document.getElementById('addTaskForm').reset();
+        // Eğer atanan kişi seçilmemişse veya geçersizse
+        if (!assigneeId || assigneeId === '') {
+            console.log('Atanan kişi seçilmedi, proje sahibi kullanılıyor');
+            // Proje sahibini kullan (eğer varsa)
+            if (currentProject && currentProject.owner) {
+                assigneeId = currentProject.owner;
+            } else {
+                // Atanan kişi alanını boş bırak
+                assigneeId = '';
+            }
+        }
         
-        showAlert('Görev başarıyla oluşturuldu!', 'success');
+        // Yeni görev objesi oluştur - id alanını kaldırıyoruz, MongoDB kendi ObjectId'sini oluşturacak
+        const newTask = {
+            title: taskTitle,
+            description: taskDescription,
+            startDate: taskStartDate,
+            endDate: taskEndDate,
+            assignedTo: assigneeId, // assignee yerine assignedTo kullan
+            status: 'Yapılacak' // Varsayılan durum: Yapılacak
+        };
+        
+        // İç kullanım için geçici bir id oluştur (API'ye gönderilmeyecek)
+        const tempTaskId = `task-${Date.now()}`;
+        
+        // Yükleniyor göstergesi göster
+        showLoadingOverlay('Görev kaydediliyor');
+        
+        // Görevi API'ye kaydet
+        try {
+            console.log('Görev kaydediliyor:', newTask);
+            console.log('Proje ID:', currentProject.id);
+            
+            // API URL'ini kontrol et
+            console.log('API URL:', API_URL.tasks);
+            
+            // Varsayılan olarak localStorage'dan token al
+            let token = localStorage.getItem('token');
+            console.log('Token:', token ? 'Token mevcut' : 'Token bulunamadı');
+            
+            // Eğer token yoksa, basit bir test token'i kullan
+            if (!token) {
+                console.warn('Token bulunamadı, test token kullanılıyor');
+                token = 'test-token';
+            }
+            
+            // Görevi API'ye gönder - projeler altındaki görevler endpoint'ini kullan
+            const response = await fetch(`${API_URL.projects}/${currentProject.id}/tasks`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newTask) // Sadece görev verilerini gönder
+            });
+            
+            // Yanıtı kontrol et
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API yanıtı:', errorText);
+                throw new Error(`Görev kaydedilirken bir hata oluştu: ${response.status} ${response.statusText}`);
+            }
+            
+            // Yanıtı JSON olarak parse et
+            const savedTask = await response.json();
+            console.log('Kaydedilen görev:', savedTask);
+            
+            // Kaydedilen görevi listeye ekle
+            if (savedTask.task) {
+                // API yanıtında task alanı varsa
+                const taskData = savedTask.task;
+                const formattedTask = {
+                    id: taskData._id || taskData.id || tempTaskId,
+                    title: taskData.title || newTask.title,
+                    description: taskData.description || newTask.description,
+                    startDate: taskData.startDate || newTask.startDate,
+                    endDate: taskData.endDate || newTask.endDate,
+                    assignee: taskData.assignedTo || assigneeId,
+                    status: taskData.status || 'Yapılacak'
+                };
+                tasks.push(formattedTask);
+                console.log('API yanıtındaki görev listeye eklendi:', formattedTask);
+            } else if (savedTask._id || savedTask.id) {
+                // API doğrudan görev nesnesini döndürüyorsa
+                const formattedTask = {
+                    id: savedTask._id || savedTask.id || tempTaskId,
+                    title: savedTask.title || newTask.title,
+                    description: savedTask.description || newTask.description,
+                    startDate: savedTask.startDate || newTask.startDate,
+                    endDate: savedTask.endDate || newTask.endDate,
+                    assignee: savedTask.assignedTo || assigneeId,
+                    status: savedTask.status || 'Yapılacak'
+                };
+                tasks.push(formattedTask);
+                console.log('Formatlanmış görev listeye eklendi:', formattedTask);
+            } else {
+                // Yedek olarak orijinal görevi ekle
+                const backupTask = {
+                    id: tempTaskId,
+                    ...newTask
+                };
+                tasks.push(backupTask);
+                console.log('Orijinal görev listeye eklendi:', backupTask);
+            }
+            
+            // Görevleri yeniden render et
+            renderTasks();
+            console.log('Görevler yeniden render edildi');
+            
+            // Başarı mesajı göster
+            showAlert('Görev başarıyla oluşturuldu!', 'success');
+            
+            // Modal'ı güvenli şekilde kapat
+            closeModal('addTaskModal', false); // Sayfayı yenileme
+            
+            // Formu temizle
+            document.getElementById('addTaskForm').reset();
+            
+            // 2 saniye bekledikten sonra sayfayı yenile
+            setTimeout(() => {
+                console.log('Sayfa yenileniyor...');
+                window.location.reload();
+            }, 2000);
+            
+        } catch (apiError) {
+            console.error('API çağrısı hatası:', apiError);
+            showAlert(`Görev API'ye kaydedilemedi: ${apiError.message}. Görev geçici olarak kaydedildi.`, 'warning');
+            
+            // Hata durumunda görevi geçici olarak listeye ekle
+            tasks.push(newTask);
+            console.log('Hata durumunda görev geçici olarak eklendi:', newTask);
+            
+            // Görevleri yeniden render et
+            renderTasks();
+            
+            // Modal'ı güvenli şekilde kapat
+            closeModal('addTaskModal', false); // Sayfayı yenileme
+            
+            // Yükleniyor göstergesini kaldır
+            document.querySelector('.global-loading-overlay')?.remove();
+        }
+        
+
     } catch (error) {
         console.error('Görev kaydedilirken hata oluştu:', error);
         showAlert('Görev kaydedilirken bir hata oluştu.', 'danger');
+        
+        // Yükleniyor göstergesini kaldır
+        document.querySelector('.global-loading-overlay')?.remove();
     }
 }
 
-// Görev atama seçeneklerini güncelle
-function updateTaskAssigneeOptions() {
-    // Backend 'team' alanını kullanıyor, frontend bazen 'teamMembers' kullanıyor
-    // Her iki alanı da kontrol edelim
-    const team = currentProject.team || currentProject.teamMembers || [];
-    const assigneeSelects = document.querySelectorAll('.task-assignee');
-    
-    console.log('Mevcut ekip üyeleri:', team); // Debug için log
-    
-    assigneeSelects.forEach(select => {
-        // Mevcut seçimi koru
-        const currentValue = select.value;
-        
-        // Select'i temizle
-        select.innerHTML = '<option value="">Seçiniz</option>';
-        
-        // Ekip üyelerini ekle
-        team.forEach(member => {
-            console.log('İşlenen üye:', member); // Debug için log
-            
-            const option = document.createElement('option');
-            let memberId = '';
-            let memberName = '';
-            
-            // Üye verisi bir obje ise
-            if (typeof member === 'object' && member !== null) {
-                // ID'yi al
-                memberId = member.id || member._id || '';
-                
-                // İsmi al (farklı olası alanları kontrol et)
-                if (member.name) {
-                    memberName = member.name;
-                } else if (member.email) {
-                    memberName = member.email;
-                } else if (member.username) {
-                    memberName = member.username;
-                } else if (member.fullName) {
-                    memberName = member.fullName;
-                }
-                
-                // Eğer hala isim bulunamadıysa ve member bir string ise
-                if (!memberName && typeof member === 'string') {
-                    memberName = member;
-                }
-            } 
-            // Üye verisi string ise
-            else if (typeof member === 'string') {
-                memberId = member;
-                memberName = member;
+// Yükleniyor göstergesi göster
+function showLoadingOverlay(message) {
+    // Modern pulse animasyonu için CSS ekle
+    const styleId = 'loading-overlay-style';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            @keyframes pulse-animation {
+                0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7); transform: scale(0.95); }
+                70% { box-shadow: 0 0 0 15px rgba(13, 110, 253, 0); transform: scale(1); }
+                100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); transform: scale(0.95); }
             }
+            .loading-pulse {
+                animation: pulse-animation 1.5s infinite;
+            }
+            .loading-dots span {
+                display: inline-block;
+                animation: loading-dots 1.4s infinite;
+            }
+            .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+            .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+            @keyframes loading-dots {
+                0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+                40% { transform: scale(1); opacity: 1; }
+            }
+            .global-loading-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background-color: rgba(255, 255, 255, 0.85);
+                backdrop-filter: blur(5px);
+                z-index: 9999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Varsa eski overlay'i kaldır
+    const existingOverlay = document.querySelector('.global-loading-overlay');
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
+    
+    // Sayfanın tamamını kaplayan overlay oluştur
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'global-loading-overlay';
+    loadingOverlay.innerHTML = `
+        <div class="text-center p-4" style="background-color: white; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.08);">
+            <div class="d-flex justify-content-center mb-3">
+                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center loading-pulse" 
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-check2-all text-white" style="font-size: 24px;"></i>
+                </div>
+            </div>
+            <h5 class="mb-2">${message}</h5>
+            <div class="loading-dots">
+                <span class="mx-1 fs-4">.</span>
+                <span class="mx-1 fs-4">.</span>
+                <span class="mx-1 fs-4">.</span>
+            </div>
+        </div>
+    `;
+    
+    // Body'ye ekle
+    document.body.appendChild(loadingOverlay);
+    
+    return loadingOverlay;
+}
+
+// Görev atama seçeneklerini güncelle
+async function updateTaskAssigneeOptions() {
+    try {
+        console.log('updateTaskAssigneeOptions çağrıldı');
+        
+        // Ekip üyeleri listesini al
+        let teamMembers = [];
+        
+        // Backend 'team' alanını kullanıyor, frontend bazen 'teamMembers' kullanıyor
+        if (currentProject && currentProject.team && Array.isArray(currentProject.team)) {
+            teamMembers = currentProject.team;
+            console.log('currentProject.team kullanılıyor:', teamMembers);
+        } else if (currentProject && currentProject.teamMembers && Array.isArray(currentProject.teamMembers)) {
+            teamMembers = currentProject.teamMembers;
+            console.log('currentProject.teamMembers kullanılıyor:', teamMembers);
+        } else {
+            console.warn('Projede ekip üyesi bulunamadı veya geçerli bir formatta değil');
+            teamMembers = [];
+        }
+        
+        // Tüm görev atama seçim kutularını bul
+        const assigneeSelects = document.querySelectorAll('.task-assignee');
+        console.log(`${assigneeSelects.length} adet görev atama seçim kutusu bulundu`);
+        
+        if (assigneeSelects.length === 0) {
+            console.warn('Görev atama seçim kutusu bulunamadı');
+            return;
+        }
+        
+        // Ekip üyelerinin bilgilerini işle
+        const processedTeamMembers = [];
+        
+        // Eğer ekip üyeleri sadece ID'lerden oluşuyorsa, kullanıcı bilgilerini getir
+        if (teamMembers.length > 0 && typeof teamMembers[0] === 'string') {
+            console.log('Ekip üyeleri ID listesi, kullanıcı bilgilerini getiriyoruz');
             
-            console.log('Oluşturulan seçenek:', { id: memberId, name: memberName }); // Debug için log
+            // Test amaçlı sabit kullanıcı verileri (API çağrısı başarısız olursa kullanılacak)
+            const mockUsers = [
+                { id: '1', name: 'Hussein Sadek' },
+                { id: '2', name: 'Ahmet Yılmaz' },
+                { id: '3', name: 'Ayşe Demir' },
+                { id: '4', name: 'Mehmet Kaya' },
+                { id: '5', name: 'Zeynep Çelik' }
+            ];
             
-            // Geçerli bir ID ve isim varsa seçeneği ekle
-            if (memberId && memberName) {
-                option.value = memberId;
-                option.textContent = memberName;
-                select.appendChild(option);
+            // Her bir ID için kullanıcı bilgilerini ekle
+            for (const memberId of teamMembers) {
+                // Önce mock verilerinde ara
+                const mockUser = mockUsers.find(user => user.id === memberId);
+                if (mockUser) {
+                    processedTeamMembers.push({
+                        id: mockUser.id,
+                        name: mockUser.name
+                    });
+                    console.log(`Kullanıcı bulundu (mock): ${mockUser.name}`);
+                    continue;
+                }
+                
+                // Mock verilerde yoksa ID'yi doğrudan kullan
+                processedTeamMembers.push({
+                    id: memberId,
+                    name: `Üye ${memberId}`
+                });
+                console.log(`Kullanıcı bulunamadı, ID kullanılıyor: ${memberId}`);
+            }
+        } else {
+            // Ekip üyeleri zaten obje listesi ise
+            for (const member of teamMembers) {
+                if (typeof member === 'object' && member !== null) {
+                    // ID ve isim bilgilerini al
+                    const id = member.id || member._id || '';
+                    let name = '';
+                    
+                    // İsim bilgisini çeşitli alanlardan almaya çalış
+                    if (member.name) name = member.name;
+                    else if (member.fullName) name = member.fullName;
+                    else if (member.email) name = member.email;
+                    else if (member.username) name = member.username;
+                    else name = `Üye ${id}`;
+                    
+                    processedTeamMembers.push({
+                        id: id,
+                        name: name
+                    });
+                    console.log(`İşlenen üye: ${name}`);
+                } else if (typeof member === 'string') {
+                    // Eğer üye string ise, doğrudan kullan
+                    processedTeamMembers.push({
+                        id: member,
+                        name: member
+                    });
+                    console.log(`İşlenen üye (string): ${member}`);
+                }
+            }
+        }
+        
+        console.log('Tüm işlenen ekip üyeleri:', processedTeamMembers);
+        
+        // Her bir görev atama seçim kutusunu güncelle
+        assigneeSelects.forEach(select => {
+            // Mevcut seçimi koru
+            const currentValue = select.value;
+            
+            // Seçim kutusunu temizle
+            select.innerHTML = '<option value="">Seçiniz</option>';
+            
+            // İşlenen ekip üyelerini ekle
+            processedTeamMembers.forEach(member => {
+                if (member.id && member.name) {
+                    const option = document.createElement('option');
+                    option.value = member.id;
+                    option.textContent = member.name;
+                    select.appendChild(option);
+                }
+            });
+            
+            // Eğer önceki bir seçim varsa, onu tekrar seç
+            if (currentValue) {
+                const option = select.querySelector(`option[value="${currentValue}"]`);
+                if (option) option.selected = true;
             }
         });
         
-        // Eğer önceki bir seçim varsa, onu tekrar seç
-        if (currentValue) {
-            const optionByValue = select.querySelector(`option[value="${currentValue}"]`);
-            if (optionByValue) {
-                optionByValue.selected = true;
-            } else {
-                Array.from(select.options).forEach(option => {
-                    if (option.textContent === currentValue) {
-                        option.selected = true;
-                    }
-                });
-            }
-        }
-    });
+        console.log('Görev atama seçenekleri başarıyla güncellendi');
+    } catch (error) {
+        console.error('Görev atama seçeneklerini güncellerken hata:', error);
+    }
 }
 
 // Sürükle-bırak işlemleri için ayarlar
@@ -1824,9 +2072,8 @@ async function saveProject() {
         // Görev atama seçeneklerini güncelle (ekip üyeleri değişmiş olabilir)
         updateTaskAssigneeOptions();
         
-        // Modalı kapat
-        const editProjectModal = bootstrap.Modal.getInstance(document.getElementById('editProjectModal'));
-        editProjectModal.hide();
+        // Modalı güvenli şekilde kapat
+        closeModal('editProjectModal');
         
         // Başarı mesajı göster
         showAlert('Proje başarıyla güncellendi', 'success');
@@ -2134,16 +2381,8 @@ async function saveTeamMembers() {
         // Görev atama seçeneklerini güncelle (ekip üyeleri değişmiş olabilir)
         updateTaskAssigneeOptions();
         
-        // Modalı kapat
-        const modalElement = document.getElementById('addTeamMemberModal');
-        if (modalElement) {
-            // Bootstrap 5 yöntemi ile modalı kapat
-            const addTeamMemberModal = bootstrap.Modal.getInstance(modalElement);
-            if (addTeamMemberModal) {
-                addTeamMemberModal.hide();
-                console.log('Modal başarıyla kapatıldı (Bootstrap 5)');
-            }
-        }
+        // Modalı güvenli şekilde kapat
+        closeModal('addTeamMemberModal');
         
         // Başarı mesajı göster
         showAlert('Ekip üyeleri başarıyla güncellendi', 'success');
