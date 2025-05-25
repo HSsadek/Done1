@@ -1,18 +1,33 @@
 import React from 'react';
 import { View, StyleSheet, Alert, TouchableOpacity } from 'react-native';
-import { Surface, Text, Chip, Avatar, IconButton } from 'react-native-paper';
+import { Surface, Text, Chip, Avatar, IconButton, ProgressBar } from 'react-native-paper';
 import { COLORS } from '../constants/theme';
+import { TASK_STATUS } from '../constants/taskStatus';
 
 const ProjectCard = ({ project, onPress, onDelete }) => {
   const { 
     title, 
     description, 
     team = [],
-    status = 'Devam Ediyor',
     tasks = [] 
   } = project;
 
   const MAX_MEMBERS_SHOWN = 3;
+  
+  // Görev ilerleme durumunu hesapla - sadece tamamlanan görevlere göre
+  const calculateProgress = () => {
+    if (!tasks || tasks.length === 0) return 0;
+    
+    // Sadece tamamlanmış görevleri say
+    const completedTasks = tasks.filter(task => 
+      task.status === TASK_STATUS.DONE || task.status === 'Tamamlandı'
+    ).length;
+    
+    return completedTasks / tasks.length;
+  };
+  
+  const progress = calculateProgress();
+  const progressPercent = Math.round(progress * 100);
 
   const handleDelete = (event) => {
     if (event) {
@@ -41,6 +56,13 @@ const ProjectCard = ({ project, onPress, onDelete }) => {
       <Surface style={styles.card}>
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <IconButton
+            icon="delete"
+            iconColor={COLORS.danger}
+            size={20}
+            onPress={handleDelete}
+            style={styles.deleteButton}
+          />
         </View>
 
         <Text style={styles.description} numberOfLines={2}>{description}</Text>
@@ -75,6 +97,18 @@ const ProjectCard = ({ project, onPress, onDelete }) => {
           </Text>
         </View>
 
+        <View style={styles.progressSection}>
+          <View style={styles.progressLabelContainer}>
+            <Text style={styles.progressLabel}>İlerleme</Text>
+            <Text style={styles.progressPercent}>{progressPercent}%</Text>
+          </View>
+          <ProgressBar 
+            progress={progress} 
+            color={COLORS.primary} 
+            style={styles.progressBar}
+          />
+        </View>
+
         <View style={styles.footer}>
           <Chip 
             mode="outlined" 
@@ -84,15 +118,17 @@ const ProjectCard = ({ project, onPress, onDelete }) => {
           >
             {tasks.length} Görev
           </Chip>
+          <Chip 
+            mode="outlined" 
+            style={styles.completedTaskCount}
+            textStyle={styles.completedTaskText}
+            icon="check-circle"
+          >
+            {tasks.filter(task => task.status === TASK_STATUS.DONE || task.status === 'Tamamlandı').length} Tamamlandı
+          </Chip>
         </View>
 
-        <IconButton
-          icon="delete"
-          iconColor={COLORS.danger}
-          size={20}
-          onPress={handleDelete}
-          style={styles.deleteButton}
-        />
+
       </Surface>
     </TouchableOpacity>
   );
@@ -143,6 +179,29 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
     marginLeft: 4,
   },
+  progressSection: {
+    marginBottom: 12,
+  },
+  progressLabelContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: COLORS.gray,
+  },
+  progressPercent: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.light,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -153,11 +212,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteButton: {
-    position: 'absolute',
-    right: 8,
-    bottom: 8,
     margin: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: 0,
   },
   statusChip: {
     height: 24,
@@ -174,6 +230,13 @@ const styles = StyleSheet.create({
   },
   taskCountText: {
     color: COLORS.gray,
+    fontSize: 12,
+  },
+  completedTaskCount: {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  completedTaskText: {
+    color: '#4CAF50',
     fontSize: 12,
   },
 });

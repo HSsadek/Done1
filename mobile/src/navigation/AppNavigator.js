@@ -6,6 +6,7 @@ import { COLORS } from '../constants/theme';
 
 import LoginScreen from '../screens/LoginScreen';
 import ProjectsScreen from '../screens/ProjectsScreen';
+import CompletedProjectsScreen from '../screens/CompletedProjectsScreen';
 import ProjectDetailScreen from '../screens/ProjectDetailScreen';
 import CreateProjectScreen from '../screens/CreateProjectScreen';
 import ProjectEditScreen from '../screens/ProjectEditScreen';
@@ -38,6 +39,14 @@ const AppNavigator = () => {
           component={ProjectsScreen}
           options={{
             title: 'Projelerim',
+          }}
+        />
+        
+        <Stack.Screen 
+          name="CompletedProjects" 
+          component={CompletedProjectsScreen}
+          options={{
+            title: 'Tamamlanan Projeler',
           }}
         />
 

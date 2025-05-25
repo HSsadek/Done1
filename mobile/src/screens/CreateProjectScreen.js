@@ -68,8 +68,7 @@ const CreateProjectScreen = ({ navigation }) => {
         description: values.description,
         startDate: values.startDate,
         endDate: values.endDate,
-        team: values.teamMembers.map((m) => m.id),
-        status: 'Not Started', // veya başka bir varsayılan durum
+        team: values.teamMembers.map((m) => m.id)
       };
       // Önce projeyi oluştur
       const response = await projectAPI.createProject(projectPayload);

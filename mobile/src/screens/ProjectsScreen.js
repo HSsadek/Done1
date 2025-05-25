@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { Image } from 'react-native';
-import { View, FlatList, ActivityIndicator, StyleSheet, RefreshControl, Alert } from 'react-native';
-import { FAB } from 'react-native-paper';
+import { View, FlatList, ActivityIndicator, StyleSheet, RefreshControl, Alert, TouchableOpacity } from 'react-native';
+import { FAB, Button, Text, Chip, Searchbar } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import ProjectCard from '../components/ProjectCard';
 import { projectAPI } from '../services/api';
 import { COLORS } from '../constants/theme';
+import { TASK_STATUS } from '../constants/taskStatus';
 
 import { IconButton } from 'react-native-paper';
 
@@ -17,6 +18,24 @@ const ProjectsScreen = ({ navigation }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeProjects, setActiveProjects] = useState([]);
+  const [completedProjects, setCompletedProjects] = useState([]);
+  const [tasksCompletedProjects, setTasksCompletedProjects] = useState([]);
+  const [allCompletedProjects, setAllCompletedProjects] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredActiveProjects, setFilteredActiveProjects] = useState([]);
+
+  // Tüm görevleri tamamlanmış projeleri kontrol eden fonksiyon
+  const isProjectTasksCompleted = (project) => {
+    if (!project.tasks || project.tasks.length === 0) {
+      return false; // Görev yoksa tamamlanmış sayılmaz
+    }
+    
+    // Tüm görevlerin tamamlanmış olup olmadığını kontrol et
+    return project.tasks.every(task => 
+      task.status === TASK_STATUS.DONE || task.status === 'Tamamlandı'
+    );
+  };
 
   const fetchProjects = async () => {
     try {
@@ -50,13 +69,53 @@ const ProjectsScreen = ({ navigation }) => {
         }
         return false;
       });
+      
+      // Tüm görevleri tamamlanmış projeleri bul
+      const tasksCompleted = filtered.filter(project => isProjectTasksCompleted(project));
+      
+      // Durumu "Tamamlandı" olan projeleri bul
+      const statusCompleted = filtered.filter(project => project.status === 'Tamamlandı');
+      
+      // Her iki koşulu da sağlayan projeleri birleştir ve tekrar edenleri kaldır
+      const allCompleted = [...new Set([...statusCompleted, ...tasksCompleted])];
+      
+      // Aktif projeleri bul - sadece görevlerin tamamlanma durumuna bak
+      const active = filtered.filter(project => {
+        // Tüm görevleri tamamlanmamışsa aktif say
+        return !isProjectTasksCompleted(project);
+      });
+      
       // Projeleri tarihe göre sırala (en yeni en üstte)
-      const sortedProjects = filtered.sort((a, b) => {
+      const sortedActive = active.sort((a, b) => {
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
-      setProjects(sortedProjects);
+      
+      const sortedStatusCompleted = statusCompleted.sort((a, b) => {
+        return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+      });
+      
+      const sortedTasksCompleted = tasksCompleted.sort((a, b) => {
+        return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+      });
+      
+      const sortedAllCompleted = allCompleted.sort((a, b) => {
+        return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+      });
+      
+      // Aktif projeleri ana sayfada göstermek için projects state'ine ata
+      setProjects(sortedActive);
+      
+      // Diğer state'leri güncelle
+      setActiveProjects(sortedActive);
+      setFilteredActiveProjects(sortedActive); // Arama filtresini de güncelle
+      setCompletedProjects(sortedStatusCompleted);
+      setTasksCompletedProjects(sortedTasksCompleted);
+      setAllCompletedProjects(sortedAllCompleted);
       console.log('Kullanıcı ID:', currentUser._id);
-      console.log('Filtrelenmiş ve sıralanmış projeler:', sortedProjects);
+      console.log('Aktif projeler:', sortedActive);
+      console.log('Durumu Tamamlandı olan projeler:', sortedStatusCompleted);
+      console.log('Görevleri tamamlanmış projeler:', sortedTasksCompleted);
+      console.log('Tüm tamamlanmış projeler:', sortedAllCompleted);
     } catch (error) {
       console.error('Error fetching projects:', error);
     } finally {
@@ -83,6 +142,20 @@ const ProjectsScreen = ({ navigation }) => {
     setRefreshing(true);
     fetchProjects();
   }, []);
+  
+  // Arama sorgusunu güncelle ve filtreleme yap
+  const onChangeSearch = (query) => {
+    setSearchQuery(query);
+    if (query.trim() === '') {
+      setFilteredActiveProjects(activeProjects);
+    } else {
+      const filtered = activeProjects.filter(project => 
+        project.title.toLowerCase().includes(query.toLowerCase()) ||
+        (project.description && project.description.toLowerCase().includes(query.toLowerCase()))
+      );
+      setFilteredActiveProjects(filtered);
+    }
+  };
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -157,8 +230,34 @@ const ProjectsScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.headerContainer}>
+        
+        <View style={styles.searchContainer}>
+          <Searchbar
+            placeholder="Proje ara..."
+            onChangeText={onChangeSearch}
+            value={searchQuery}
+            style={styles.searchBar}
+            inputStyle={styles.searchInput}
+            iconColor={COLORS.primary}
+            clearButtonMode="while-editing"
+            theme={{ roundness: 12 }}
+            icon={() => <IconButton icon="magnify" size={20} color={COLORS.primary} style={{margin: 0, padding: 0}} />}
+            clearIcon={() => <IconButton icon="close-circle" size={16} color={COLORS.gray} style={{margin: 0, padding: 0}} />}
+          />
+        </View>
+        
+        <TouchableOpacity 
+          style={styles.completedButton}
+          onPress={() => navigation.navigate('CompletedProjects')}
+        >
+          <Text style={styles.completedButtonText}>Tamamlanan Projeler ({allCompletedProjects.length})</Text>
+          <IconButton icon="chevron-right" size={20} color={COLORS.primary} style={{margin: 0, padding: 0}} />
+        </TouchableOpacity>
+      </View>
+      
       <FlatList
-        data={projects}
+        data={filteredActiveProjects}
         keyExtractor={(item) => item._id.toString()}
         renderItem={({ item }) => (
           <ProjectCard
@@ -176,6 +275,21 @@ const ProjectsScreen = ({ navigation }) => {
           />
         }
         contentContainerStyle={styles.listContent}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <IconButton
+              icon="folder-outline"
+              size={60}
+              color={COLORS.gray}
+            />
+            <View style={styles.emptyTextContainer}>
+              <Text style={styles.emptyTitle}>Aktif Proje Yok</Text>
+              <Text style={styles.emptyDescription}>
+                Henüz aktif projeniz bulunmuyor. Yeni bir proje oluşturmak için sağ alttaki + butonuna tıklayın.
+              </Text>
+            </View>
+          </View>
+        )}
       />
       <FAB
         icon="plus"
@@ -192,13 +306,91 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  headerContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  searchContainer: {
+    marginBottom: 8,
+  },
+  searchBar: {
+    elevation: 2,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    height: 46,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  searchInput: {
+    fontSize: 14,
+    marginLeft: -4,
+  },
+  statsChip: {
+    marginRight: 8,
+    backgroundColor: COLORS.light,
+  },
+  statsChipText: {
+    color: COLORS.text,
+    fontSize: 12,
+  },
+  completedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.lightBackground,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  completedButtonText: {
+    color: COLORS.primary,
+    fontWeight: 'bold',
+  },
   listContent: {
     padding: 16,
+    paddingTop: 8,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    marginTop: 40,
+  },
+  emptyTextContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  emptyDescription: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    marginHorizontal: 20,
   },
   fab: {
     position: 'absolute',

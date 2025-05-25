@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { TextInput, Button, ActivityIndicator, Text, Menu, IconButton } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { TextInput, Button, ActivityIndicator, Text, Surface, IconButton, Divider, Avatar, Chip } from 'react-native-paper';
 import { projectAPI } from '../services/api';
 import { COLORS } from '../constants/theme';
 import DatePickerModal from '../components/DatePickerModal';
 import TaskEditList from '../components/TaskEditList';
+import TeamMemberModal from '../components/TeamMemberModal';
+import TaskModalNew from '../components/TaskModalNew';
 
 const ProjectEditScreen = ({ route, navigation }) => {
   const { projectId } = route.params;
@@ -12,14 +14,15 @@ const ProjectEditScreen = ({ route, navigation }) => {
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  const [status, setStatus] = useState('Devam Ediyor');
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
-  const [statusMenuVisible, setStatusMenuVisible] = useState(false);
   const [tasks, setTasks] = useState([]);
+  const [showTeamMemberModal, setShowTeamMemberModal] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const loadProject = async () => {
@@ -30,7 +33,6 @@ const ProjectEditScreen = ({ route, navigation }) => {
         setDescription(response.data.description);
         setStartDate(response.data.startDate ? new Date(response.data.startDate) : null);
         setEndDate(response.data.endDate ? new Date(response.data.endDate) : null);
-        setStatus(response.data.status || 'Devam Ediyor');
         setTeam(response.data.team || []);
         // Fetch tasks
         const taskRes = await require('../services/api').taskAPI.getProjectTasks(projectId);
@@ -48,30 +50,91 @@ const ProjectEditScreen = ({ route, navigation }) => {
 
   const handleSave = async () => {
     try {
-      setLoading(true);
+      setSaving(true);
       setError('');
-      await projectAPI.updateProject(projectId, {
+      
+      // Validasyon kontrolleri
+      if (!title.trim()) {
+        Alert.alert('Hata', 'Proje başlığı boş olamaz');
+        setSaving(false);
+        return;
+      }
+      
+      // Kullanıcı token'ını kontrol et
+      const storage = require('../utils/storage').storage;
+      const token = await storage.getToken();
+      
+      if (!token) {
+        Alert.alert('Hata', 'Oturum süresi dolmuş olabilir. Lütfen tekrar giriş yapın.');
+        setSaving(false);
+        return;
+      }
+      
+      // Token'i API servisine ayarla
+      require('../services/api').setMemoryToken(token);
+      
+      // Proje bilgilerini güncelle
+      const projectData = {
         title,
         description,
         startDate,
         endDate,
-        status,
         team: team.map(m => m._id || m),
-      });
-      // Update tasks in backend
-      for (const task of tasks) {
-        if (task._id) {
-          await require('../services/api').taskAPI.updateTask(task._id, task);
-        } else {
-          await require('../services/api').taskAPI.createTask(projectId, task);
+      };
+      
+      console.log('Güncellenecek proje verileri:', projectData);
+      
+      await projectAPI.updateProject(projectId, projectData);
+      
+      // Görevleri güncelle
+      try {
+        for (const task of tasks) {
+          // Görev verilerini hazırla - assignedTo alanını çıkar
+          const { assignedTo, ...taskData } = task;
+          
+          console.log('Güncellenecek görev verileri:', {
+            title: taskData.title,
+            description: taskData.description,
+            startDate: taskData.startDate,
+            endDate: taskData.endDate,
+            status: taskData.status
+          });
+          
+          if (task._id) {
+            // Güncellenmiş API fonksiyonunu kullan - projectId parametresi eklendi
+            // assignedTo alanını göndermiyoruz
+            await require('../services/api').taskAPI.updateTask(projectId, task._id, taskData);
+            console.log(`Görev güncellendi: ${task._id}`);
+          } else {
+            // Yeni görev oluşturma - assignedTo alanını ekleyebiliriz
+            // Çünkü backend bunu kontrol edecek
+            await require('../services/api').taskAPI.createTask(projectId, {
+              ...taskData,
+              assignedTo: assignedTo
+            });
+            console.log('Yeni görev oluşturuldu');
+          }
         }
+      } catch (err) {
+        console.error('Görev güncelleme hatası:', err);
+        throw err;
       }
-      navigation.goBack(); // Return to the previous screen
+      
+      Alert.alert('Başarılı', 'Proje başarıyla güncellendi', [
+        { text: 'Tamam', onPress: () => navigation.goBack() }
+      ]);
     } catch (err) {
       console.error('Proje güncellenirken hata:', err);
-      setError('Proje güncellenirken bir hata oluştu');
+      
+      if (err.response && err.response.status === 401) {
+        setError('Bu projeyi güncelleme yetkiniz yok');
+        Alert.alert('Yetki Hatası', 'Bu projeyi güncelleme yetkiniz yok. Lütfen tekrar giriş yapın.');
+      } else {
+        setError('Proje güncellenirken bir hata oluştu');
+        Alert.alert('Hata', 'Proje güncellenirken bir hata oluştu');
+      }
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -87,10 +150,35 @@ const ProjectEditScreen = ({ route, navigation }) => {
     setTasks(prev => prev.filter((_, i) => i !== idx));
   };
   const handleTaskAdd = () => {
+    // Görev ekleme modalını göster
+    setShowTaskModal(true);
+  };
+  
+  const handleTaskSubmit = (newTask) => {
+    // Modal'dan gelen yeni görevi tasks listesine ekle
     setTasks(prev => [
       ...prev,
-      { title: '', description: '', status: 'Yapılacak' }
+      { 
+        ...newTask,
+        status: 'Yapılacak'
+      }
     ]);
+    setShowTaskModal(false);
+  };
+  
+  const handleAddTeamMember = (newMember) => {
+    // Ekip üyesi zaten eklenmiş mi kontrol et
+    if (team.some(m => (m._id || m) === newMember.id)) {
+      Alert.alert('Uyarı', 'Bu ekip üyesi zaten eklenmiş');
+      return;
+    }
+    
+    setTeam([...team, {
+      _id: newMember.id,
+      name: newMember.name,
+      email: newMember.email
+    }]);
+    setShowTeamMemberModal(false);
   };
 
   if (loading) {
@@ -111,29 +199,51 @@ const ProjectEditScreen = ({ route, navigation }) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <TextInput
-        label="Proje Başlığı"
-        value={title}
-        onChangeText={setTitle}
-        style={styles.input}
-        mode="outlined"
-      />
-      <TextInput
-        label="Proje Açıklaması"
-        value={description}
-        onChangeText={setDescription}
-        style={styles.input}
-        mode="outlined"
-        multiline
-      />
-      <View style={{flexDirection:'row', alignItems:'center', marginBottom:16}}>
-        <Text style={{flex:1}}>Başlangıç Tarihi: {startDate ? startDate.toLocaleDateString('tr-TR') : '-'}</Text>
-        <Button mode="outlined" compact onPress={() => { setShowStartPicker(true); setShowEndPicker(false); }}>Tarih Seç</Button>
-      </View>
-      <View style={{flexDirection:'row', alignItems:'center', marginBottom:16}}>
-        <Text style={{flex:1}}>Bitiş Tarihi: {endDate ? endDate.toLocaleDateString('tr-TR') : '-'}</Text>
-        <Button mode="outlined" compact onPress={() => { setShowEndPicker(true); setShowStartPicker(false); }}>Tarih Seç</Button>
-      </View>
+      <Surface style={styles.headerCard}>
+        <Text style={styles.sectionTitle}>Proje Bilgileri</Text>
+        <TextInput
+          label="Proje Başlığı"
+          value={title}
+          onChangeText={setTitle}
+          style={styles.input}
+          mode="outlined"
+        />
+        <TextInput
+          label="Proje Açıklaması"
+          value={description}
+          onChangeText={setDescription}
+          style={styles.input}
+          mode="outlined"
+          multiline
+          numberOfLines={4}
+        />
+        
+        <Text style={styles.subsectionTitle}>Proje Tarihleri</Text>
+        <View style={styles.dateContainer}>
+          <View style={styles.dateItem}>
+            <Text style={styles.dateLabel}>Başlangıç Tarihi</Text>
+            <Chip 
+              icon="calendar" 
+              onPress={() => { setShowStartPicker(true); setShowEndPicker(false); }}
+              style={styles.dateChip}
+            >
+              {startDate ? startDate.toLocaleDateString('tr-TR') : 'Tarih seç'}
+            </Chip>
+          </View>
+          
+          <View style={styles.dateItem}>
+            <Text style={styles.dateLabel}>Bitiş Tarihi</Text>
+            <Chip 
+              icon="calendar" 
+              onPress={() => { setShowEndPicker(true); setShowStartPicker(false); }}
+              style={styles.dateChip}
+            >
+              {endDate ? endDate.toLocaleDateString('tr-TR') : 'Tarih seç'}
+            </Chip>
+          </View>
+        </View>
+      </Surface>
+      
       <DatePickerModal
         visible={showStartPicker}
         date={startDate || new Date()}
@@ -146,46 +256,92 @@ const ProjectEditScreen = ({ route, navigation }) => {
         onConfirm={date => { setShowEndPicker(false); setEndDate(date); }}
         onCancel={() => setShowEndPicker(false)}
       />
-      <View style={{marginBottom: 16}}>
-        <Text style={{marginBottom: 6, fontWeight: 'bold'}}>Proje Durumu</Text>
-        <Menu
-          visible={statusMenuVisible}
-          onDismiss={() => setStatusMenuVisible(false)}
-          anchor={
-            <Button mode="outlined" onPress={() => setStatusMenuVisible(true)}>{status || 'Durum Seçin'}</Button>
-          }
-        >
-          <Menu.Item onPress={() => { setStatus('Yapılacak'); setStatusMenuVisible(false); }} title="Yapılacak" />
-          <Menu.Item onPress={() => { setStatus('Devam Ediyor'); setStatusMenuVisible(false); }} title="Devam Ediyor" />
-          <Menu.Item onPress={() => { setStatus('Test Edilecek'); setStatusMenuVisible(false); }} title="Test Edilecek" />
-          <Menu.Item onPress={() => { setStatus('Tamamlandı'); setStatusMenuVisible(false); }} title="Tamamlandı" />
-        </Menu>
-      </View>
-      <TaskEditList
-        tasks={tasks}
-        onTaskUpdate={handleTaskUpdate}
-        onTaskDelete={handleTaskDelete}
-        onTaskAdd={handleTaskAdd}
-        team={team}
-      />
-      <Text style={{marginBottom: 8, fontWeight:'bold'}}>Ekip Üyeleri</Text>
-      {team.map((member, idx) => (
-        <View key={member._id || member} style={{flexDirection:'row',alignItems:'center',marginBottom:4}}>
-          <Text style={{flex:1}}>{member.name || member.email || member}</Text>
-          <IconButton icon="delete" size={20} color="#d32f2f" onPress={() => {
-            setTeam(team.filter((_, i) => i !== idx));
-          }} />
+
+      <Surface style={styles.teamCard}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Ekip Üyeleri</Text>
+          <Button 
+            mode="contained" 
+            icon="account-plus" 
+            onPress={() => setShowTeamMemberModal(true)}
+            style={styles.addButton}
+          >
+            Ekle
+          </Button>
         </View>
-      ))}
-      {/* Ekip üyesi ekleme/çıkarma UI'si eklenebilir */}
-      <Button
-        mode="contained"
-        onPress={handleSave}
-        style={styles.saveButton}
-        loading={loading}
-      >
-        Kaydet
-      </Button>
+        
+        {team.length === 0 ? (
+          <Text style={styles.emptyText}>Henüz ekip üyesi eklenmemiş</Text>
+        ) : (
+          <View style={styles.teamList}>
+            {team.map((member, idx) => (
+              <Chip
+                key={member._id || member}
+                style={styles.teamMemberChip}
+                avatar={<Avatar.Text size={24} label={member.name ? member.name.charAt(0).toUpperCase() : 'U'} />}
+                onClose={() => setTeam(team.filter((_, i) => i !== idx))}
+              >
+                {member.name || member.email || member}
+              </Chip>
+            ))}
+          </View>
+        )}
+      </Surface>
+      
+      <Surface style={styles.tasksCard}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Görevler</Text>
+          <Button 
+            mode="contained" 
+            icon="plus" 
+            onPress={handleTaskAdd}
+            style={styles.addButton}
+          >
+            Görev Ekle
+          </Button>
+        </View>
+        <TaskEditList
+          tasks={tasks}
+          onTaskUpdate={handleTaskUpdate}
+          onTaskDelete={handleTaskDelete}
+          team={team}
+        />
+      </Surface>
+      
+      <View style={styles.buttonContainer}>
+        <Button
+          mode="contained"
+          onPress={handleSave}
+          style={styles.saveButton}
+          loading={saving}
+          icon="content-save"
+        >
+          Kaydet
+        </Button>
+        
+        <Button
+          mode="outlined"
+          onPress={() => navigation.goBack()}
+          style={styles.cancelButton}
+          disabled={saving}
+        >
+          İptal
+        </Button>
+      </View>
+      
+      <TeamMemberModal
+        visible={showTeamMemberModal}
+        onClose={() => setShowTeamMemberModal(false)}
+        onSubmit={handleAddTeamMember}
+        currentMembers={team.map(m => ({ id: m._id || m, name: m.name, email: m.email }))}
+      />
+      
+      <TaskModalNew
+        visible={showTaskModal}
+        onClose={() => setShowTaskModal(false)}
+        onSubmit={handleTaskSubmit}
+        teamMembers={team.map(m => ({ id: m._id || m, name: m.name || m.email || m, email: m.email || '' }))}
+      />
     </ScrollView>
   );
 };
@@ -195,13 +351,94 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 16,
     backgroundColor: COLORS.background,
+    gap: 16,
+  },
+  headerCard: {
+    padding: 16,
+    borderRadius: 8,
+    elevation: 4,
+  },
+  teamCard: {
+    padding: 16,
+    borderRadius: 8,
+    elevation: 4,
+  },
+  tasksCard: {
+    padding: 16,
+    borderRadius: 8,
+    elevation: 4,
   },
   input: {
     marginBottom: 16,
+    backgroundColor: COLORS.white,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  dateItem: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  dateLabel: {
+    fontSize: 14,
+    color: COLORS.gray,
+    marginBottom: 4,
+  },
+  dateChip: {
+    backgroundColor: COLORS.lightBackground,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addButton: {
+    height: 36,
+    justifyContent: 'center',
+  },
+  teamList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  teamMemberChip: {
+    marginBottom: 8,
+    backgroundColor: COLORS.lightBackground,
+  },
+  emptyText: {
+    color: COLORS.gray,
+    textAlign: 'center',
+    marginVertical: 16,
+    fontStyle: 'italic',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
   },
   saveButton: {
-    marginTop: 16,
+    flex: 2,
+    marginRight: 8,
     backgroundColor: COLORS.primary,
+  },
+  cancelButton: {
+    flex: 1,
   },
   centerContainer: {
     flex: 1,

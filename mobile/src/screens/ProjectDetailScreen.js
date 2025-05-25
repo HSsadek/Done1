@@ -3,7 +3,7 @@ import { TouchableOpacity } from 'react-native';
 import TaskModal from '../components/TaskModal';
 import { StyleSheet, View, ScrollView, RefreshControl, Alert, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Surface, Text, Button, Chip, ActivityIndicator, List } from 'react-native-paper';
+import { Surface, Text, Button, Chip, ActivityIndicator, List, ProgressBar } from 'react-native-paper';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 import { projectAPI, taskAPI } from '../services/api';
 import { COLORS } from '../constants/theme';
@@ -19,6 +19,7 @@ const ProjectDetailScreen = ({ route, navigation }) => {
     DONE: [],
     TO_TEST: []
   });
+  const [progressPercentage, setProgressPercentage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -39,12 +40,30 @@ const ProjectDetailScreen = ({ route, navigation }) => {
         setProject(projectResponse.data);
         setTasks(tasksResponse.data);
         // Görevleri durumlarına göre ayır
+        const todoTasks = tasksResponse.data.filter(t => t.status === 'Yapılacak');
+        const inProgressTasks = tasksResponse.data.filter(t => t.status === 'Devam Etmekte');
+        const doneTasks = tasksResponse.data.filter(t => t.status === 'Tamamlandı');
+        const toTestTasks = tasksResponse.data.filter(t => t.status === 'Test Edilecek');
+        
         setBoardTasks({
-          TODO: tasksResponse.data.filter(t => t.status === 'Yapılacak'),
-          IN_PROGRESS: tasksResponse.data.filter(t => t.status === 'Devam Etmekte'),
-          DONE: tasksResponse.data.filter(t => t.status === 'Tamamlandı'),
-          TO_TEST: tasksResponse.data.filter(t => t.status === 'Test Edilecek'),
+          TODO: todoTasks,
+          IN_PROGRESS: inProgressTasks,
+          DONE: doneTasks,
+          TO_TEST: toTestTasks,
         });
+        
+        // İlerleme yüzdesini hesapla - sadece tamamlanan görevlere göre
+        const totalTasks = tasksResponse.data.length;
+        if (totalTasks > 0) {
+          // Sadece tamamlanmış görevleri hesaba kat
+          const completedTasks = doneTasks.length;
+          
+          // Tamamlanan görev sayısını toplam görev sayısına böl
+          const percentage = completedTasks / totalTasks;
+          setProgressPercentage(percentage);
+        } else {
+          setProgressPercentage(0);
+        }
       } else {
         throw new Error('Veri boş');
       }
@@ -105,18 +124,44 @@ const ProjectDetailScreen = ({ route, navigation }) => {
   }, [navigation, projectId]);
 
   React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Button
-          icon="pencil"
-          mode="text"
-          compact
-          onPress={() => navigation.navigate('EditProject', { projectId: project?._id })}
-        >
-          Düzenle
-        </Button>
-      )
-    });
+    // Kullanıcı bilgilerini al
+    const checkUserPermission = async () => {
+      try {
+        const storage = require('../utils/storage').storage;
+        const userData = await storage.getUserData();
+        
+        if (!userData || !project) return;
+        
+        // Kullanıcı proje sahibi mi kontrol et
+        const isOwner = project.owner && 
+          (project.owner._id === userData._id || project.owner === userData._id);
+        
+        // Sadece proje sahibi düzenleyebilir
+        if (isOwner) {
+          navigation.setOptions({
+            headerRight: () => (
+              <Button
+                icon="pencil"
+                mode="text"
+                compact
+                onPress={() => navigation.navigate('EditProject', { projectId: project?._id })}
+              >
+                Düzenle
+              </Button>
+            )
+          });
+        } else {
+          // Proje sahibi değilse düzenle butonu gösterme
+          navigation.setOptions({
+            headerRight: () => null
+          });
+        }
+      } catch (err) {
+        console.error('Kullanıcı yetkisi kontrol edilirken hata:', err);
+      }
+    };
+    
+    checkUserPermission();
   }, [navigation, project]);
 
   if (loading) {
@@ -157,15 +202,52 @@ const ProjectDetailScreen = ({ route, navigation }) => {
     'Tamamlandı': 'Tamamlandı'
   };
 
+  // Kullanıcının görevi değiştirme yetkisi var mı kontrol et
+  const canUserModifyTask = async (task) => {
+    try {
+      const storage = require('../utils/storage').storage;
+      const userData = await storage.getUserData();
+      
+      if (!userData || !task) return false;
+      
+      // Kullanıcı proje sahibi mi?
+      const isOwner = project.owner && 
+        (project.owner._id === userData._id || project.owner === userData._id);
+      
+      // Görev kullanıcıya mı atanmış?
+      const isAssignee = task.assignedTo && 
+        (task.assignedTo._id === userData._id || task.assignedTo === userData._id);
+      
+      // Proje sahibi veya görev atanan kişi ise değiştirebilir
+      return isOwner || isAssignee;
+    } catch (err) {
+      console.error('Kullanıcı yetkisi kontrol edilirken hata:', err);
+      return false;
+    }
+  };
+
   const handleMoveTask = async (task, currentStatus) => {
+    // Önce kullanıcının yetkisi var mı kontrol et
+    const hasPermission = await canUserModifyTask(task);
+    
+    if (!hasPermission) {
+      Alert.alert('Yetki Hatası', 'Bu görevin durumunu değiştirme yetkiniz yok. Sadece size atanan görevlerin durumunu değiştirebilirsiniz.');
+      return;
+    }
+    
     // Sıradaki statüye geçir (örnek: TODO -> IN_PROGRESS -> TO_TEST -> DONE)
     const statusOrder = ['Yapılacak', 'Devam Etmekte', 'Test Edilecek', 'Tamamlandı'];
     const nextIndex = (statusOrder.indexOf(currentStatus) + 1) % statusOrder.length;
     const newStatus = statusOrder[nextIndex];
+    
     try {
+      // Güncellenmiş taskAPI servisini kullan
+      console.log(`Görev durumu güncelleniyor: ProjectID=${project._id}, TaskID=${task._id}, Status=${newStatus}`);
       await taskAPI.updateTaskStatus(project._id, task._id, newStatus);
-      loadProjectData();
+      console.log('Görev durumu başarıyla güncellendi');
+      await loadProjectData();
     } catch (e) {
+      console.error('Görev durumu güncelleme hatası:', e);
       Alert.alert('Hata', 'Görev durumu güncellenemedi');
     }
   };
@@ -174,48 +256,87 @@ const ProjectDetailScreen = ({ route, navigation }) => {
     setBoardTasks(prev => ({ ...prev, [status]: newData }));
     // Burada sıralama backend'e gönderilmiyorsa sadece localde değişir.
   };
-
-  const handleAdvanceStatus = (task) => {
+  
+  const handleAdvanceStatus = async (task) => {
+    // Önce kullanıcının yetkisi var mı kontrol et
+    const hasPermission = await canUserModifyTask(task);
+    
+    if (!hasPermission) {
+      Alert.alert('Yetki Hatası', 'Bu görevin durumunu değiştirme yetkiniz yok. Sadece size atanan görevlerin durumunu değiştirebilirsiniz.');
+      return;
+    }
+    
     const statusOrder = ['Yapılacak', 'Devam Etmekte', 'Test Edilecek', 'Tamamlandı'];
     const currentIndex = statusOrder.indexOf(task.status);
     if (currentIndex === -1 || currentIndex === statusOrder.length - 1) return; // Tamamlandı ise ilerlemesin
     const nextStatus = statusOrder[currentIndex + 1];
-    taskAPI.updateTaskStatus(project._id, task._id, nextStatus)
-      .then(() => loadProjectData())
-      .catch(() => alert('Durum güncellenemedi!'))
-  }
-
-  const handleBackStatus = (task) => {
+    
+    try {
+      // Güncellenmiş taskAPI servisini kullan
+      console.log(`Görev durumu ilerletiliyor: ProjectID=${project._id}, TaskID=${task._id}, Status=${task.status} -> ${nextStatus}`);
+      await taskAPI.updateTaskStatus(project._id, task._id, nextStatus);
+      console.log('Görev durumu başarıyla ilerletildi');
+      await loadProjectData();
+    } catch (error) {
+      console.error('Görev durumu güncellenirken hata:', error);
+      Alert.alert('Hata', 'Görev durumu güncellenemedi. Lütfen tekrar deneyin.');
+    }
+  };
+  
+  const handleBackStatus = async (task) => {
+    // Önce kullanıcının yetkisi var mı kontrol et
+    const hasPermission = await canUserModifyTask(task);
+    
+    if (!hasPermission) {
+      Alert.alert('Yetki Hatası', 'Bu görevin durumunu değiştirme yetkiniz yok. Sadece size atanan görevlerin durumunu değiştirebilirsiniz.');
+      return;
+    }
+    
     const statusOrder = ['Yapılacak', 'Devam Etmekte', 'Test Edilecek', 'Tamamlandı'];
     const currentIndex = statusOrder.indexOf(task.status);
     if (currentIndex <= 0) return; // İlk durumdaysa geri gitmesin
     const prevStatus = statusOrder[currentIndex - 1];
-    taskAPI.updateTaskStatus(project._id, task._id, prevStatus)
-      .then(() => loadProjectData())
-      .catch(() => alert('Durum geri alınamadı!'))
-  }
+    
+    try {
+      // Güncellenmiş taskAPI servisini kullan
+      console.log(`Görev durumu geri alınıyor: ProjectID=${project._id}, TaskID=${task._id}, Status=${task.status} -> ${prevStatus}`);
+      await taskAPI.updateTaskStatus(project._id, task._id, prevStatus);
+      console.log('Görev durumu başarıyla geri alındı');
+      await loadProjectData();
+    } catch (error) {
+      console.error('Görev durumu güncellenirken hata:', error);
+      Alert.alert('Hata', 'Görev durumu geri alınamadı. Lütfen tekrar deneyin.');
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
       <ScrollView 
-        style={styles.container}
         refreshControl={
           <RefreshControl
-            onRefresh={loadProjectData}
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadProjectData();
+            }}
             colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
           />
         }
       >
         <Surface style={styles.headerCard}>
-          <View style={{flexDirection:'row', alignItems:'center', justifyContent:'space-between'}}>
-  <Text style={styles.projectTitle}>{project.title}</Text>
-</View>
-          <Chip 
-            mode="flat"
-            style={[styles.statusChip, { backgroundColor: COLORS.primary }]}
-          >
-            {project.status}
-          </Chip>
+          <Text style={styles.projectTitle}>{project.title}</Text>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressLabelContainer}>
+              <Text style={styles.progressLabel}>Tamamlanan Görevler</Text>
+              <Text style={styles.progressPercentage}>{Math.round(progressPercentage * 100)}%</Text>
+            </View>
+            <ProgressBar 
+              progress={progressPercentage} 
+              color={COLORS.primary} 
+              style={styles.progressBar} 
+            />
+          </View>
           <Text style={styles.description}>{project.description}</Text>
           <View style={styles.ownerSection}>
             <Text style={styles.sectionLabel}>Proje Sahibi:</Text>
@@ -380,6 +501,30 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: 8,
     elevation: 4,
+  },
+  progressContainer: {
+    marginVertical: 12,
+  },
+  progressLabelContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  progressLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  progressPercentage: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.light,
   },
   projectTitle: {
     fontSize: 24,
