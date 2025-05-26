@@ -3,7 +3,7 @@ import { TouchableOpacity } from 'react-native';
 import TaskModal from '../components/TaskModal';
 import { StyleSheet, View, ScrollView, RefreshControl, Alert, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Surface, Text, Button, Chip, ActivityIndicator, List, ProgressBar } from 'react-native-paper';
+import { Surface, Text, Button, Chip, ActivityIndicator, List, ProgressBar, Avatar } from 'react-native-paper';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 import { projectAPI, taskAPI } from '../services/api';
 import { COLORS } from '../constants/theme';
@@ -386,7 +386,22 @@ const ProjectDetailScreen = ({ route, navigation }) => {
                   title={member.name}
                   description={member.email}
                   left={props => (
-                    <List.Icon {...props} icon="account" />
+                    member.profileImage ? (
+                      <Avatar.Image 
+                        {...props} 
+                        size={40} 
+                        source={{ uri: member.profileImage }} 
+                        style={{ marginRight: 8, marginLeft: 8 }}
+                      />
+                    ) : (
+                      <Avatar.Icon 
+                        {...props} 
+                        size={40} 
+                        icon="account" 
+                        color={COLORS.white}
+                        style={{ backgroundColor: COLORS.primary, marginRight: 8, marginLeft: 8 }}
+                      />
+                    )
                   )}
                 />
               ))

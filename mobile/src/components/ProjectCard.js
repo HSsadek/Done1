@@ -70,17 +70,29 @@ const ProjectCard = ({ project, onPress, onDelete }) => {
         <View style={styles.teamSection}>
           <View style={styles.avatarStack}>
             {team.slice(0, MAX_MEMBERS_SHOWN).map((member, index) => (
-              <Avatar.Text
-                key={member._id}
-                label={member.name.charAt(0).toUpperCase()}
-                size={24}
-                style={[
-                  styles.avatar,
-                  { marginLeft: index > 0 ? -10 : 0 }
-                ]}
-                color={COLORS.white}
-                backgroundColor={COLORS.primary}
-              />
+              member.profileImage ? (
+                <Avatar.Image
+                  key={member._id}
+                  source={{ uri: member.profileImage }}
+                  size={24}
+                  style={[
+                    styles.avatar,
+                    { marginLeft: index > 0 ? -10 : 0 }
+                  ]}
+                />
+              ) : (
+                <Avatar.Text
+                  key={member._id}
+                  label={member.name.charAt(0).toUpperCase()}
+                  size={24}
+                  style={[
+                    styles.avatar,
+                    { marginLeft: index > 0 ? -10 : 0 }
+                  ]}
+                  color={COLORS.white}
+                  backgroundColor={COLORS.primary}
+                />
+              )
             ))}
             {team.length > MAX_MEMBERS_SHOWN && (
               <Avatar.Text
