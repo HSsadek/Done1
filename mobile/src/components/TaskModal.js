@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Modal, ScrollView, TextInput, TouchableOpacity } from 'react-native';
-import { Button, Surface, Text, List } from 'react-native-paper';
+import { Button, Surface, Text, List, IconButton } from 'react-native-paper';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { COLORS } from '../constants/theme';
 
@@ -73,29 +73,54 @@ const TaskModal = ({ visible, onClose, onSubmit, teamMembers = [], initialValues
   return (
     <Modal
       visible={visible}
-      onRequestClose={onClose}
-      animationType="slide"
       transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
         <Surface style={styles.modalContent}>
-          <ScrollView keyboardShouldPersistTaps="handled">
-            <Text style={styles.modalTitle}>{readOnly ? 'Görev Detayı' : 'Görev Ekle'}</Text>
-
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {readOnly ? 'Görev Detayı' : 'Görev Düzenle'}
+            </Text>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false}>
             {readOnly ? (
               // Read-only view
               <View style={styles.readOnlyContainer}>
-                <Text style={styles.readOnlyTitle}>{formData.title}</Text>
-                <Text style={styles.readOnlyDescription}>{formData.description}</Text>
-                <Text style={styles.readOnlyField}>
-                  <Text style={styles.readOnlyLabel}>Atanan:</Text> {getAssignedUserName()}
-                </Text>
-                <Text style={styles.readOnlyField}>
-                  <Text style={styles.readOnlyLabel}>Başlangıç:</Text> {formatDate(formData.startDate)}
-                </Text>
-                <Text style={styles.readOnlyField}>
-                  <Text style={styles.readOnlyLabel}>Bitiş:</Text> {formatDate(formData.endDate)}
-                </Text>
+                <View style={styles.readOnlySection}>
+                  <Text style={styles.readOnlyTitle}>Başlık</Text>
+                  <Text style={styles.readOnlyText}>{formData.title}</Text>
+                </View>
+                
+                <View style={styles.readOnlySection}>
+                  <Text style={styles.readOnlyTitle}>Açıklama</Text>
+                  <Text style={styles.readOnlyText}>{formData.description}</Text>
+                </View>
+                
+                <View style={styles.readOnlySection}>
+                  <Text style={styles.readOnlyTitle}>Atanan Kişi</Text>
+                  <Text style={styles.readOnlyText}>{getAssignedUserName()}</Text>
+                </View>
+                
+                <View style={styles.readOnlySection}>
+                  <Text style={styles.readOnlyTitle}>Başlangıç Tarihi</Text>
+                  <Text style={styles.readOnlyText}>{formatDate(formData.startDate)}</Text>
+                </View>
+                
+                <View style={styles.readOnlySection}>
+                  <Text style={styles.readOnlyTitle}>Bitiş Tarihi</Text>
+                  <Text style={styles.readOnlyText}>{formatDate(formData.endDate)}</Text>
+                </View>
+                
+                <Button
+                  mode="contained"
+                  onPress={onClose}
+                  style={styles.closeButton}
+                  labelStyle={styles.closeButtonLabel}
+                >
+                  Kapat
+                </Button>
               </View>
             ) : (
               // Edit view
@@ -216,6 +241,7 @@ const TaskModal = ({ visible, onClose, onSubmit, teamMembers = [], initialValues
               </View>
             )}
           </ScrollView>
+
         </Surface>
       </View>
     </Modal>
@@ -236,12 +262,30 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     backgroundColor: '#fff',
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 5,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginBottom: 20,
-    textAlign: 'center',
+    flex: 1,
+  },
+  closeButton: {
+    backgroundColor: COLORS.primary,
+    marginTop: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'center',
+    width: '80%',
+  },
+  closeButtonLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   // Read-only styles
   readOnlyContainer: {
