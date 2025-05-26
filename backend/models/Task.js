@@ -20,6 +20,12 @@ const taskSchema = new mongoose.Schema({
         ref: 'User',
         required: [true, 'Task must be assigned to a team member']
     },
+    startDate: {
+        type: Date
+    },
+    endDate: {
+        type: Date
+    },
     project: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Project',

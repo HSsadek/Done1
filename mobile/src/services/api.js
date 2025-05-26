@@ -37,7 +37,7 @@ api.interceptors.request.use(
         console.error('Token alınırken hata:', err);
       }
     }
-    
+
     console.log('Request:', {
       method: config.method.toUpperCase(),
       url: config.url,
@@ -104,7 +104,7 @@ export const authAPI = {
         setMemoryToken(response.data.token);
         const storage = require('../utils/storage').storage;
         await storage.setToken(response.data.token);
-        
+
         // Kullanıcı verilerini de kaydet
         if (response.data.user) {
           await storage.setUserData(response.data.user);
@@ -178,16 +178,18 @@ export const projectAPI = {
         if (token) {
           setMemoryToken(token);
         } else {
-          throw new Error('Oturum bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
+          throw new Error(
+            'Oturum bilgisi bulunamadı. Lütfen tekrar giriş yapın.',
+          );
         }
       }
-      
+
       console.log('Proje güncelleme isteği gönderiliyor:', {
         id,
         data: projectData,
-        token: memoryToken ? 'Token var' : 'Token yok'
+        token: memoryToken ? 'Token var' : 'Token yok',
       });
-      
+
       return await api.put(`/projects/${id}`, projectData);
     } catch (error) {
       console.error('Proje güncelleme hatası:', error);
@@ -206,24 +208,32 @@ export const projectAPI = {
 
 export const taskAPI = {
   getProjectTasks: (projectId) => api.get(`/projects/${projectId}/tasks`),
-  getTaskById: (projectId, taskId) => api.get(`/projects/${projectId}/tasks/${taskId}`),
+  getTaskById: (projectId, taskId) =>
+    api.get(`/projects/${projectId}/tasks/${taskId}`),
   createTask: (projectId, taskData) =>
     api.post(`/projects/${projectId}/tasks`, taskData),
-  updateTask: (projectId, taskId, taskData) => api.put(`/projects/${projectId}/tasks/${taskId}`, taskData),
-  deleteTask: (projectId, taskId) => api.delete(`/projects/${projectId}/tasks/${taskId}`),
+  updateTask: (projectId, taskId, taskData) =>
+    api.put(`/projects/${projectId}/tasks/${taskId}`, taskData),
+  deleteTask: (projectId, taskId) =>
+    api.delete(`/projects/${projectId}/tasks/${taskId}`),
 
   // Görev atama
   assignTask: (projectId, taskId, userId) =>
     api.put(`/projects/${projectId}/tasks/${taskId}/assign`, { userId }),
-  unassignTask: (projectId, taskId) => api.put(`/projects/${projectId}/tasks/${taskId}/unassign`),
+  unassignTask: (projectId, taskId) =>
+    api.put(`/projects/${projectId}/tasks/${taskId}/unassign`),
 
   // Görev durumu güncelleme - Backend API'nin doğru endpoint'i: /api/projects/:projectId/tasks/:taskId
   updateTaskStatus: async (projectId, taskId, status) => {
     try {
-      console.log(`Görev durumu güncelleniyor: ProjectID=${projectId}, TaskID=${taskId}, Status=${status}`);
-      
+      console.log(
+        `Görev durumu güncelleniyor: ProjectID=${projectId}, TaskID=${taskId}, Status=${status}`,
+      );
+
       // Backend'in doğru endpoint'ini kullan
-      const response = await api.put(`/projects/${projectId}/tasks/${taskId}`, { status });
+      const response = await api.put(`/projects/${projectId}/tasks/${taskId}`, {
+        status,
+      });
       console.log('Görev durumu başarıyla güncellendi');
       return response;
     } catch (error) {

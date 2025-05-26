@@ -51,9 +51,24 @@ const LoginScreen = ({ navigation }) => {
       }
     } catch (err) {
       console.error('Hata:', err.response?.data || err.message);
-      const errorMessage = err.response?.data?.message === 'Invalid email or password' 
-        ? 'E-posta veya şifre hatalı'
-        : 'Giriş yapılırken bir hata oluştu';
+      
+      // Hata mesajını kullanıcı dostu hale getir
+      let errorMessage = 'Giriş yapılırken bir hata oluştu';
+      
+      // 401 hatası - yanlış kimlik bilgileri
+      if (err.response?.status === 401) {
+        errorMessage = 'Girdiğiniz e-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edip tekrar deneyin.';
+      } 
+      // Ağ hatası
+      else if (!err.response) {
+        errorMessage = 'Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.';
+      }
+      // Diğer API hataları
+      else if (err.response?.data?.message) {
+        // Backend'den gelen Türkçe hata mesajını kullan
+        errorMessage = err.response.data.message;
+      }
+      
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -161,9 +176,11 @@ const LoginScreen = ({ navigation }) => {
                   )}
 
                   {error ? (
-                    <Text style={[styles.errorText, error.includes('başarılı') && styles.successText]}>
-                      {error}
-                    </Text>
+                    <View style={[styles.errorContainer, error.includes('başarılı') ? styles.successContainer : styles.errorContainer]}>
+                      <Text style={[styles.errorText, error.includes('başarılı') && styles.successText]}>
+                        {error}
+                      </Text>
+                    </View>
                   ) : null}
 
                   <Button
@@ -256,11 +273,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.primary,
   },
+  errorContainer: {
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 10,
+  },
+  successContainer: {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 10,
+  },
   errorText: {
     color: COLORS.danger,
-    fontSize: 12,
-    marginBottom: 10,
+    fontSize: 14,
     textAlign: 'center',
+    fontWeight: '500',
   },
   successText: {
     color: COLORS.success,

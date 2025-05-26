@@ -18,7 +18,9 @@ exports.getTask = async (req, res) => {
     try {
         const task = await Task.findById(req.params.taskId)
             .populate('assignedTo', 'name email')
-            .populate('project', 'title');
+            .populate('project', 'title')
+            .populate('startDate', 'name email')
+            .populate('endDate', 'name email');
         
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
@@ -48,8 +50,12 @@ exports.createTask = async (req, res) => {
 
         const task = await Task.create({
             ...req.body,
-            project: req.params.projectId
+            project: req.params.projectId,
+            startDate: req.body.startDate,
+            endDate: req.body.endDate
         });
+
+        console.log(req.body);
 
         // Eğer atanan kullanıcı team'de yoksa, ekle
         if (!project.team.map(id => id.toString()).includes(assignedTo.toString()) && project.owner.toString() !== assignedTo.toString()) {
@@ -59,7 +65,10 @@ exports.createTask = async (req, res) => {
 
         const populatedTask = await Task.findById(task._id)
             .populate('assignedTo', 'name email')
-            .populate('project', 'title');
+            .populate('project', 'title')
+            .populate('startDate', 'name email')
+           .populate('endDate', 'name email')
+        
 
         res.status(201).json(populatedTask);
     } catch (error) {

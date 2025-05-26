@@ -43,7 +43,11 @@ const ProfileScreen = ({ navigation }) => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editName, setEditName] = useState('');
   const [editImage, setEditImage] = useState(null);
-  const [editRole, setEditRole] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editConfirmPassword, setEditConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [followedUsers, setFollowedUsers] = useState([]);
   const [loadingFollowed, setLoadingFollowed] = useState(false);
@@ -108,41 +112,63 @@ const ProfileScreen = ({ navigation }) => {
 
   const openEditModal = () => {
     if (!user) return; // Kullanıcı verisi yoksa modalı açma
-    setEditName(user.name || '');
+    setEditName(user?.name || '');
     setEditImage(image);
-    setEditRole(user.role || '');
+    setEditPassword('');
+    setEditConfirmPassword('');
+    setPasswordError('');
     setEditModalVisible(true);
   };
 
-
   const saveProfileEdit = async () => {
-    setSavingEdit(true);
     try {
-      let profileImageToSend = editImage;
-      // Eğer local bir dosya ise ve base64 değilse, base64'e çevir
-      if (editImage && editImage.startsWith('file://')) {
-        const base64 = await FileSystem.readAsStringAsync(editImage, { encoding: FileSystem.EncodingType.Base64 });
-        profileImageToSend = `data:image/jpeg;base64,${base64}`;
+      // Şifre kontrolü
+      if (editPassword || editConfirmPassword) {
+        if (editPassword !== editConfirmPassword) {
+          setPasswordError('Şifreler eşleşmiyor');
+          return;
+        }
+        if (editPassword.length < 6) {
+          setPasswordError('Şifre en az 6 karakter olmalıdır');
+          return;
+        }
+        setPasswordError('');
       }
-      // Backend'e profil güncelleme isteği gönder
-      const payload = { name: editName, profileImage: profileImageToSend, role: editRole };
-      await authAPI.updateProfile(payload);
-      const updatedUser = { ...user, name: editName, profileImage: profileImageToSend, role: editRole };
-      setUser(updatedUser);
-      setImage(profileImageToSend);
-      // Profil güncelleme sonrası local storage'ı güncelle
-      const { setUserData } = require('../utils/storage').storage;
-      await setUserData(updatedUser);
+
+      setSavingEdit(true);
+      const updateData = {
+        name: editName,
+      };
+
+      // Eğer şifre değiştiyse
+      if (editPassword && editPassword === editConfirmPassword) {
+        updateData.password = editPassword;
+      }
+
+      // Eğer profil resmi değiştiyse
+      if (editImage && editImage !== image) {
+        let profileImageToSend = editImage;
+        // Eğer local bir dosya ise ve base64 değilse, base64'e çevir
+        if (editImage && editImage.startsWith('file://')) {
+          const base64 = await FileSystem.readAsStringAsync(editImage, { encoding: FileSystem.EncodingType.Base64 });
+          profileImageToSend = `data:image/jpeg;base64,${base64}`;
+        }
+        updateData.profileImage = profileImageToSend;
+      }
+
+      const response = await authAPI.updateProfile(updateData);
+      setUser(response.data.user);
+      setImage(response.data.user.profileImage);
       setEditModalVisible(false);
-      // Başarı mesajı göstermek için kısa süreli bir feedback ekleyebilirsiniz
+      // Başarı mesajı göster
+      Alert.alert('Başarılı', 'Profil bilgileriniz güncellendi');
     } catch (err) {
-      alert('Profil güncellenirken bir hata oluştu.');
+      Alert.alert('Hata', 'Profil güncellenirken bir hata oluştu');
+      console.error('Profil güncelleme hatası:', err);
     } finally {
       setSavingEdit(false);
     }
   };
-
-
 
   const handleFollowedUserPress = (user) => {
     navigation.push('Profile', { userId: user._id });
@@ -196,10 +222,6 @@ const ProfileScreen = ({ navigation }) => {
                 <IconButton icon="email-outline" size={20} color={COLORS.primary} style={{ marginRight: 8, marginLeft: -8 }} disabled />
                 <Text style={styles.profileValue}>{user?.email || '-'}</Text>
               </View>
-              <View style={styles.infoRow}>
-                <IconButton icon="account-tie" size={20} color={COLORS.primary} style={{ marginRight: 8, marginLeft: -8 }} disabled />
-                <Text style={styles.profileValue}>{user?.role || '-'}</Text>
-              </View>
             </View>
           </Surface>
           <Button mode="contained" style={styles.logoutModernButton} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} onPress={handleLogout}>
@@ -242,16 +264,52 @@ const ProfileScreen = ({ navigation }) => {
           left={<TextInput.Icon icon="account" />}
         />
         <TextInput
-          style={styles.inputModern}
-          value={editRole}
-          onChangeText={setEditRole}
-          placeholder="Rol"
+          label="Yeni Şifre"
+          value={editPassword}
+          onChangeText={setEditPassword}
           mode="outlined"
-          left={<TextInput.Icon icon="account-tie" />}
+          style={styles.inputModern}
+          secureTextEntry={!showPassword}
+          placeholder="Değiştirmek istemiyorsanız boş bırakın"
+          right={<TextInput.Icon 
+            icon={showPassword ? "eye-off" : "eye"} 
+            onPress={() => setShowPassword(!showPassword)}
+          />}
         />
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
-          <Button onPress={() => setEditModalVisible(false)} mode="outlined" style={{ marginRight: 8 }}>İptal</Button>
-          <Button onPress={saveProfileEdit} mode="contained" loading={savingEdit} disabled={savingEdit}>Kaydet</Button>
+        <TextInput
+          label="Şifre Tekrarı"
+          value={editConfirmPassword}
+          onChangeText={setEditConfirmPassword}
+          mode="outlined"
+          style={styles.inputModern}
+          secureTextEntry={!showConfirmPassword}
+          placeholder="Şifrenizi tekrar girin"
+          right={<TextInput.Icon 
+            icon={showConfirmPassword ? "eye-off" : "eye"} 
+            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          />}
+        />
+        {passwordError ? (
+          <Text style={styles.errorText}>{passwordError}</Text>
+        ) : null}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 12 }}>
+          <Button
+            mode="outlined"
+            onPress={() => setEditModalVisible(false)}
+            style={{ width: '48%' }}
+            labelStyle={{ color: COLORS.gray }}
+          >
+            İptal
+          </Button>
+          <Button
+            mode="contained"
+            onPress={saveProfileEdit}
+            style={{ width: '48%', backgroundColor: COLORS.primary }}
+            loading={savingEdit}
+            disabled={savingEdit}
+          >
+            Kaydet
+          </Button>
         </View>
       </Modal>
     </Portal>
