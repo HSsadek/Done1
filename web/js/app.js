@@ -425,16 +425,31 @@ async function loadProjects() {
             };
         });
 
+        // Önce kullanıcının sahibi olduğu veya ekip üyesi olduğu projeleri filtrele
+        let userProjects = formattedProjects.filter(project => {
+            // Kullanıcı projenin sahibi mi?
+            const isOwner = project.isOwnedByCurrentUser;
+            
+            // Kullanıcı projenin ekip üyesi mi?
+            const isTeamMember = project.teamMembers.some(member => {
+                const memberId = member.id;
+                return memberId === userId;
+            });
+            
+            // Kullanıcı ya projenin sahibi ya da ekip üyesi olmalı
+            return isOwner || isTeamMember;
+        });
+        
         // Sayfa URL'sine göre projeleri filtrele
         const currentPage = window.location.pathname;
-        let filteredProjects = formattedProjects;
+        let filteredProjects = userProjects;
 
         if (currentPage.includes('completed-projects.html')) {
             // Sadece tamamlanan projeleri göster
-            filteredProjects = formattedProjects.filter(project => project.isCompleted);
+            filteredProjects = userProjects.filter(project => project.isCompleted);
         } else if (currentPage.includes('index.html') || currentPage === '/') {
             // Ana sayfada sadece tamamlanmamış projeleri göster
-            filteredProjects = formattedProjects.filter(project => !project.isCompleted);
+            filteredProjects = userProjects.filter(project => !project.isCompleted);
         }
 
         renderProjects(filteredProjects);

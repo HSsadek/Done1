@@ -2001,12 +2001,50 @@ function openEditProjectModal() {
     editTeamMembersList.innerHTML = '';
     
     // Mevcut ekip üyelerini forma ekle
-    if (currentProject.teamMembers && currentProject.teamMembers.length > 0) {
-        currentProject.teamMembers.forEach(member => {
-            if (member && member.id) {
-                addTeamMemberToEditList(member);
-            }
-        });
+    // Hem teamMembers hem de team alanını kontrol et
+    const teamMembers = currentProject.teamMembers || currentProject.team || [];
+    console.log('Düzenleme modalında gösterilecek ekip üyeleri:', teamMembers);
+    
+    if (teamMembers.length > 0) {
+        // Eğer ekip üyeleri ID listesi ise (backend'den gelen)
+        if (typeof teamMembers[0] === 'string') {
+            // Her bir ID için kullanıcı bilgilerini getir
+            teamMembers.forEach(async (memberId) => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`${API_URL.users}/${memberId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const user = await response.json();
+                        // Kullanıcıyı düzenleme listesine ekle
+                        addTeamMemberToEditList({
+                            id: user._id || user.id,
+                            name: user.name || user.email || user.username
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Kullanıcı bilgisi alınırken hata: ${memberId}`, error);
+                }
+            });
+        } else {
+            // Ekip üyeleri zaten obje ise
+            teamMembers.forEach(member => {
+                if (member) {
+                    // API'den gelen kullanıcı verilerinde id yoksa _id kullan
+                    const memberId = member._id || member.id;
+                    if (memberId) {
+                        addTeamMemberToEditList({
+                            id: memberId,
+                            name: member.name || member.email || member.username
+                        });
+                    }
+                }
+            });
+        }
     }
     
     // Ekip üyesi arama alanına autocomplete ekle
@@ -2096,12 +2134,11 @@ async function saveProject() {
     
     // Güncellenmiş proje objesi oluştur
     const updatedProject = {
-        ...currentProject,
-        name: projectName,
+        title: projectName,                    // 'name' yerine 'title' kullan
         description: projectDescription,
         startDate: projectStartDate || null,
         endDate: projectEndDate || null,
-        teamMembers: teamMembers
+        team: teamMembers.map(member => member.id)  // Sadece ID'leri gönder, 'teamMembers' yerine 'team' kullan
     };
     
     try {
@@ -2124,8 +2161,21 @@ async function saveProject() {
         const updatedProjectData = await response.json();
         console.log('Güncellenen proje verileri:', updatedProjectData);
         
-        // Mevcut proje verisini güncelle
-        currentProject = updatedProjectData;
+        // Backend'den gelen veriyi frontend formatına dönüştür
+        // Doğrudan atama yapmak yerine, veri yapısını dönüştür
+        currentProject = {
+            id: updatedProjectData._id || updatedProjectData.id || currentProject.id,
+            name: updatedProjectData.title || updatedProjectData.name || projectName,
+            description: updatedProjectData.description || projectDescription,
+            startDate: updatedProjectData.startDate || projectStartDate,
+            endDate: updatedProjectData.endDate || projectEndDate,
+            owner: updatedProjectData.owner || currentProject.owner,
+            // Ekip üyeleri için hem team hem de teamMembers alanını kontrol et
+            // Eğer backend sadece ID listesi döndüyse, mevcut ekip üyesi nesnelerini koru
+            teamMembers: teamMembers
+        };
+        
+        console.log('Güncellenmiş currentProject:', currentProject);
         
         // Proje detaylarını yeniden render et
         renderProjectDetails();

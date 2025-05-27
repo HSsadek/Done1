@@ -1,10 +1,16 @@
 const Project = require('../models/Project');
 const User = require('../models/User'); // Added User model for team validation
 
-// Get all projects
+// Get all projects for the current user (owned or team member)
 exports.getProjects = async (req, res) => {
     try {
-        const projects = await Project.find()
+        // Find projects where current user is either the owner or a team member
+        const projects = await Project.find({
+            $or: [
+                { owner: req.user._id },  // User is the owner
+                { team: req.user._id }     // User is a team member
+            ]
+        })
             .sort({ createdAt: -1 })
             .populate('owner', 'name email')
             .populate('team', 'name email profileImage')

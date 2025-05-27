@@ -382,7 +382,14 @@ async function saveSettings() {
         // Form verilerini al
         const name = document.getElementById('settingsName').value;
         const email = document.getElementById('settingsEmail').value;
-        const role = document.getElementById('settingsRole').value;
+        
+        // settingsRole elementini kontrol et - eğer yoksa role değişkenini tanımlama
+        let role = null;
+        const roleElement = document.getElementById('settingsRole');
+        if (roleElement) {
+            role = roleElement.value;
+        }
+        
         const password = document.getElementById('settingsPassword').value;
         const passwordConfirm = document.getElementById('settingsPasswordConfirm').value;
         const profileImage = document.getElementById('settingsProfileImage').src;
@@ -435,13 +442,25 @@ async function saveSettings() {
         // Profil bilgilerini güncelle
         document.getElementById('userName').textContent = name;
         document.getElementById('userEmail').textContent = email;
-        document.getElementById('userRole').textContent = role;
+        
+        // userRole elementini kontrol et
+        const userRoleElement = document.getElementById('userRole');
+        if (userRoleElement && role !== null) {
+            userRoleElement.textContent = role;
+        }
+        
         document.getElementById('profileImage').src = profileImage;
         
         // Modal formunu da güncelle
         document.getElementById('editName').value = name;
         document.getElementById('editEmail').value = email;
-        document.getElementById('editRole').value = role;
+        
+        // editRole elementini kontrol et
+        const editRoleElement = document.getElementById('editRole');
+        if (editRoleElement && role !== null) {
+            editRoleElement.value = role;
+        }
+        
         document.getElementById('editProfileImage').src = profileImage;
         
         showAlert('Profil bilgileriniz başarıyla güncellendi.', 'success');
