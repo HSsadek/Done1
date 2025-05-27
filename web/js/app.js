@@ -1,5 +1,62 @@
 // Ana Sayfa (Dashboard) JavaScript Kodu
 
+// Loading timer ve ID'si
+let loadingTimer = null;
+let loadingDelay = 100; // Milisaniye cinsinden gecikme süresi
+
+// Loading animasyonunu göster
+function showLoading(message = 'Projeler yükleniyor...') {
+    // Önce varsa önceki timer'ı temizle
+    clearTimeout(loadingTimer);
+    
+    // Loading animasyonunu sadece belirli bir gecikme sonrasında göster
+    loadingTimer = setTimeout(() => {
+        // Eğer zaten bir loading container varsa, tekrar oluşturma
+        if (document.querySelector('.loading-container')) {
+            return;
+        }
+        
+        // Loading container oluştur
+        const loadingContainer = document.createElement('div');
+        loadingContainer.className = 'loading-container';
+        
+        // Spinner oluştur
+        const spinner = document.createElement('div');
+        spinner.className = 'loading-spinner';
+        
+        // Mesaj oluştur
+        const loadingText = document.createElement('div');
+        loadingText.className = 'loading-text';
+        loadingText.textContent = message;
+        
+        // Elementleri container'a ekle
+        loadingContainer.appendChild(spinner);
+        loadingContainer.appendChild(loadingText);
+        
+        // Container'ı body'e ekle
+        document.body.appendChild(loadingContainer);
+    }, loadingDelay);
+}
+
+// Loading animasyonunu gizle
+function hideLoading() {
+    // Önce zamanlayıcıyı temizle (eğer hala gösterilmediyse göstermeyi iptal et)
+    clearTimeout(loadingTimer);
+    loadingTimer = null;
+    
+    // Eğer loading container varsa kaldır
+    const loadingContainer = document.querySelector('.loading-container');
+    if (loadingContainer) {
+        // Önce opacity'yi 0 yap (fade-out efekti için)
+        loadingContainer.style.opacity = '0';
+        
+        // Animasyon tamamlandıktan sonra elementi kaldır
+        setTimeout(() => {
+            loadingContainer.remove();
+        }, 10); // Hızlı bir şekilde kaldır
+    }
+}
+
 // Kullanıcı giriş kontrolü: Token yoksa login sayfasına yönlendir (bfcache dahil)
 function checkAuth() {
     if (!localStorage.getItem('token')) {
@@ -292,33 +349,41 @@ function setupEventListeners() {
 // Projeleri yükle (sadece giriş yapan kullanıcıya ait gerçek projeler)
 async function loadProjects() {
     try {
+        // API çağrısı başlamadan önce zaman damgası al
+        const startTime = performance.now();
+        
+        // Loading animasyonunu göster (API'nin yanıt süresi kadar gecikme ile)
+        showLoading('Projeler yükleniyor...');
+        
         const token = localStorage.getItem('token');
         if (!token) {
             window.location.href = 'login.html';
             return;
         }
-
+        
+        // API'den projeleri çek
         const response = await fetch(API_URL.projects, {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
-
+        
         if (!response.ok) {
-            throw new Error('Projeler yüklenemedi');
+            throw new Error('Projeler yüklenirken bir hata oluştu!');
         }
-
+        
         const projects = await response.json();
-        const userId = await getUserIdFromProfile(token);
-
-        // Kullanıcının sahibi olduğu veya ekipte olduğu projeleri filtrele
-        const userProjects = projects.filter(p => 
-            p.owner && p.owner._id === userId || 
-            (p.team && p.team.some(t => t._id === userId))
-        );
-
-        // Projeleri dönüştür ve durumlarını kontrol et
-        const formattedProjects = userProjects.map(p => {
+        
+        // API çağrısı tamamlandıktan sonra geçen süreyi hesapla
+        const apiResponseTime = performance.now() - startTime;
+        
+        // Loading animasyonunun gecikme süresini API yanıt süresine göre ayarla
+        // Eğer API yanıtı çok hızlıysa, loading animasyonu hiç gösterilmeyecek
+        loadingDelay = apiResponseTime;
+        
+        // Projeleri formatla
+        const formattedProjects = projects.map(p => {
             const taskCount = p.tasks ? p.tasks.length : 0;
             const completedTaskCount = p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0;
             const isCompleted = taskCount > 0 && taskCount === completedTaskCount;
@@ -351,9 +416,19 @@ async function loadProjects() {
         }
 
         renderProjects(filteredProjects);
+        
+        // Loading animasyonunu gizle
+        hideLoading();
+        
+        return filteredProjects;
     } catch (error) {
         console.error('Projeler yüklenirken hata:', error);
-        showAlert('Projeler yüklenirken bir hata oluştu', 'danger');
+        showAlert('Projeler yüklenirken bir hata oluştu: ' + error.message, 'danger');
+        
+        // Hata durumunda da loading animasyonunu gizle
+        hideLoading();
+        
+        return [];
     }
 }
 
