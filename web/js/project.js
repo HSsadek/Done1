@@ -1249,7 +1249,7 @@ async function deleteTask(taskId) {
 
     } catch (error) {
         console.error('Görev silinirken hata:', error);
-        showAlert('Görev silinirken bir hata oluştu: ' + error.message, 'danger');
+        showAlert('Bu görevi silme yetkiniz yok','warning');
     }
 }
 
@@ -1881,7 +1881,7 @@ async function handleDrop(e) {
 
     } catch (error) {
         console.error('Görev durumu güncellenirken hata:', error);
-        showAlert('Görev durumu güncellenirken bir hata oluştu: ' + error.message, 'danger');
+        showAlert('Bu görevi güncelleme yetkiniz yok', 'warning');
         
         // Hata durumunda görevleri orijinal durumlarına geri döndür
         renderTasks();

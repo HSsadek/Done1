@@ -17,11 +17,17 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
-  <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
       <div class="container">
-        <a class="navbar-brand" href="index.html">Proje Yönetim Sistemi</a>
+        <a class="navbar-brand fw-bold" href="index.html">
+          <i class="bi bi-kanban me-2"></i>Proje Yönetim Sistemi
+        </a>
         <button
           class="navbar-toggler"
           type="button"
@@ -33,16 +39,20 @@
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav ms-auto">
+          <ul class="navbar-nav ms-auto align-items-center">
             <li class="nav-item">
-              <a class="nav-link" href="index.html">Dashboard</a>
+              <a class="nav-link" href="index.html">
+                <i class="bi bi-grid me-1"></i>Dashboard
+              </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link active" href="profile.html">Profil</a>
+              <a class="nav-link active" href="profile.html">
+                <i class="bi bi-person me-1"></i>Profil
+              </a>
             </li>
             <li class="nav-item">
               <button
-                class="btn btn-outline-light ms-3"
+                class="btn btn-outline-light ms-3 rounded-pill"
                 id="logoutBtn"
                 type="button"
               >
@@ -54,125 +64,130 @@
       </div>
     </nav>
 
-    <div class="container mt-4">
-      <div class="row">
-        <div class="col-md-3">
-          <div class="card">
-            <div class="card-body text-center">
-              <div class="mb-3">
-                <img
-                  src="./images/default-profile.svg"
-                  alt="Profil Fotoğrafı"
-                  id="profileImage"
-                  class="rounded-circle"
-                  style="width: 150px; height: 150px; object-fit: cover"
-                />
-              </div>
-              <h5 class="card-title" id="userName">Kullanıcı Adı</h5>
-              <p class="card-text text-muted" id="userEmail">
-                kullanici@email.com
-              </p>
-              <p class="card-text">
-                <span class="badge bg-primary" id="userRole"
-                  >Proje Yöneticisi</span
-                >
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-9">
-          <ul class="nav nav-tabs" id="profileTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button
-                class="nav-link active"
-                id="settings-tab"
-                data-bs-toggle="tab"
-                data-bs-target="#settings"
-                type="button"
-                role="tab"
-              >
-                Ayarlar
-              </button>
-            </li>
-          </ul>
-          <div class="tab-content mt-3" id="profileTabsContent">
-            <div
-              class="tab-pane fade show active"
-              id="settings"
-              role="tabpanel"
-            >
-              <h5 class="mb-4">Hesap Ayarları</h5>
-              <form id="settingsForm">
-                <div class="mb-4 text-center">
+    <div class="container py-5">
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="card-body p-0">
+              <div class="bg-primary bg-gradient text-white p-4 text-center position-relative profile-header-bg">
+                <div class="position-absolute start-0 end-0 profile-image-container">
                   <img
                     src="./images/default-profile.svg"
-                    class="profile-image mb-3"
-                    alt="Profil Resmi"
-                    id="settingsProfileImage"
-                  />
-                  <div>
-                    <label
-                      for="settingsProfileImageInput"
-                      class="btn btn-sm btn-outline-primary"
-                      >Profil Resmini Değiştir</label
-                    >
-                    <input
-                      type="file"
-                      id="settingsProfileImageInput"
-                      class="d-none"
-                      accept="image/*"
-                    />
-                  </div>
-                  <small class="text-muted d-block mt-1"
-                    >Maksimum dosya boyutu: 2MB</small
-                  >
-                </div>
-                <div class="mb-3">
-                  <label for="settingsName" class="form-label">Ad Soyad</label>
-                  <input type="text" class="form-control" id="settingsName" />
-                </div>
-                <div class="mb-3">
-                  <label for="settingsEmail" class="form-label">E-posta</label>
-                  <input type="email" class="form-control" id="settingsEmail" />
-                </div>
-                <div class="mb-3">
-                  <label for="settingsRole" class="form-label">Rol</label>
-                  <select class="form-select" id="settingsRole">
-                    <option value="Proje Yöneticisi">Proje Yöneticisi</option>
-                    <option value="Takım Lideri">Takım Lideri</option>
-                    <option value="Geliştirici">Geliştirici</option>
-                    <option value="Tasarımcı">Tasarımcı</option>
-                    <option value="Analist">Analist</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label for="settingsPassword" class="form-label"
-                    >Yeni Şifre</label
-                  >
-                  <input
-                    type="password"
-                    class="form-control"
-                    id="settingsPassword"
-                    placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                    alt="Profil Fotoğrafı"
+                    id="profileImage"
+                    class="profile-image-large rounded-circle border border-4 border-white shadow-sm"
                   />
                 </div>
-                <div class="mb-3">
-                  <label for="settingsPasswordConfirm" class="form-label"
-                    >Şifre Tekrar</label
-                  >
-                  <input
-                    type="password"
-                    class="form-control"
-                    id="settingsPasswordConfirm"
-                  />
+              </div>
+              <div class="text-center pt-5 p-4 mt-3">
+                <h4 class="fw-bold mb-1" id="userName">Kullanıcı Adı</h4>
+                <p class="text-muted mb-2" id="userEmail">
+                  <i class="bi bi-envelope-fill me-1 small"></i>kullanici@email.com
+                </p>
+
+                <div class="d-grid gap-2 mt-4">
+                  <button class="btn btn-sm btn-outline-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                    <i class="bi bi-pencil-square me-1"></i>Profili Düzenle
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  id="saveSettingsBtn"
+              </div>
+            </div>
+          </div>
+          
+
+        </div>
+        
+        <div class="col-lg-8">
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white p-4 border-0">
+              <ul class="nav nav-pills profile-tabs" id="profileTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button
+                    class="nav-link active px-4"
+                    id="settings-tab"
+                    data-bs-toggle="tab"
+                    data-bs-target="#settings"
+                    type="button"
+                    role="tab"
+                  >
+                    <i class="bi bi-gear me-2"></i>Ayarlar
+                  </button>
+                </li>
+
+              </ul>
+            </div>
+            <div class="card-body p-4">
+              <div class="tab-content" id="profileTabsContent">
+                <div
+                  class="tab-pane fade show active"
+                  id="settings"
+                  role="tabpanel"
                 >
-                  <i class="bi bi-save me-2"></i>Değişiklikleri Kaydet
-                </button>
+                  <h5 class="fw-bold mb-4"><i class="bi bi-person-gear me-2"></i>Hesap Ayarları</h5>
+              <form id="settingsForm" class="animate__animated animate__fadeIn">
+                <div class="row g-4">
+                  <div class="col-md-12 mb-2">
+                    <div class="p-4 bg-light rounded-4 text-center">
+                      <img
+                        src="./images/default-profile.svg"
+                        class="profile-image-large mb-3 rounded-circle shadow-sm"
+                        alt="Profil Resmi"
+                        id="settingsProfileImage"
+                      />
+                      <div>
+                        <label
+                          for="settingsProfileImageInput"
+                          class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                        >
+                          <i class="bi bi-camera me-1"></i>Profil Resmini Değiştir
+                        </label>
+                        <input
+                          type="file"
+                          id="settingsProfileImageInput"
+                          class="d-none"
+                          accept="image/*"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                      <input type="text" class="form-control" id="settingsName" placeholder="Ad Soyad" />
+                      <label for="settingsName"><i class="bi bi-person me-1"></i>Ad Soyad</label>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                      <input type="email" class="form-control" id="settingsEmail" placeholder="E-posta" />
+                      <label for="settingsEmail"><i class="bi bi-envelope me-1"></i>E-posta</label>
+                    </div>
+                  </div>
+                  
+
+                  
+                  <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                      <input type="password" class="form-control" id="settingsPassword" placeholder="Yeni Şifre" />
+                      <label for="settingsPassword"><i class="bi bi-key me-1"></i>Yeni Şifre</label>
+                      <div class="form-text">Değiştirmek istemiyorsanız boş bırakın</div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <div class="form-floating mb-3">
+                      <input type="password" class="form-control" id="settingsPasswordConfirm" placeholder="Şifre Tekrar" />
+                      <label for="settingsPasswordConfirm"><i class="bi bi-key-fill me-1"></i>Şifre Tekrar</label>
+                    </div>
+                  </div>
+                  
+                  <div class="col-12 text-end">
+                    <button type="button" class="btn btn-modern btn-modern-primary" id="saveSettingsBtn">
+                      <i class="bi bi-save me-2"></i>Değişiklikleri Kaydet
+                    </button>
+                  </div>
+                </div>
               </form>
             </div>
           </div>
@@ -187,32 +202,33 @@
       tabindex="-1"
       aria-hidden="true"
     >
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Profili Düzenle</h5>
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+          <div class="modal-header bg-primary bg-gradient text-white border-0">
+            <h5 class="modal-title fw-bold"><i class="bi bi-person-gear me-2"></i>Profili Düzenle</h5>
             <button
               type="button"
-              class="btn-close"
+              class="btn-close btn-close-white"
               data-bs-dismiss="modal"
               aria-label="Close"
             ></button>
           </div>
-          <div class="modal-body">
-            <form id="editProfileForm">
-              <div class="mb-3 text-center">
-                <img
-                  src="https://via.placeholder.com/100"
-                  class="profile-image-sm mb-2"
-                  alt="Profil Resmi"
-                  id="editProfileImage"
-                />
-                <div>
+          <div class="modal-body p-4">
+            <form id="editProfileForm" class="animate__animated animate__fadeIn">
+              <div class="text-center mb-4">
+                <div class="position-relative d-inline-block">
+                  <img
+                    src="./images/default-profile.svg"
+                    class="profile-image-large rounded-circle border border-3 border-primary shadow-sm"
+                    alt="Profil Resmi"
+                    id="editProfileImage"
+                  />
                   <label
                     for="profileImageInput"
-                    class="btn btn-sm btn-outline-secondary"
-                    >Resim Değiştir</label
+                    class="btn btn-sm btn-primary rounded-circle position-absolute camera-button"
                   >
+                    <i class="bi bi-camera-fill"></i>
+                  </label>
                   <input
                     type="file"
                     id="profileImageInput"
@@ -221,62 +237,51 @@
                   />
                 </div>
               </div>
-              <div class="mb-3">
-                <label for="editName" class="form-label">Ad Soyad</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="editName"
-                  required
-                />
-              </div>
-              <div class="mb-3">
-                <label for="editEmail" class="form-label">E-posta</label>
-                <input
-                  type="email"
-                  class="form-control"
-                  id="editEmail"
-                  required
-                />
-              </div>
-              <div class="mb-3">
-                <label for="editRole" class="form-label">Rol</label>
-                <select class="form-select" id="editRole">
-                  <option value="Proje Yöneticisi">Proje Yöneticisi</option>
-                  <option value="Takım Lideri">Takım Lideri</option>
-                  <option value="Geliştirici">Geliştirici</option>
-                  <option value="Tasarımcı">Tasarımcı</option>
-                  <option value="Analist">Analist</option>
-                </select>
-              </div>
-              <div class="mb-3">
-                <label for="editPassword" class="form-label"
-                  >Yeni Şifre (Değiştirmek istemiyorsanız boş bırakın)</label
-                >
-                <input type="password" class="form-control" id="editPassword" />
-              </div>
-              <div class="mb-3">
-                <label for="editPasswordConfirm" class="form-label"
-                  >Şifre Tekrar</label
-                >
-                <input
-                  type="password"
-                  class="form-control"
-                  id="editPasswordConfirm"
-                />
+              
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="editName" placeholder="Ad Soyad" required />
+                    <label for="editName"><i class="bi bi-person me-1"></i>Ad Soyad</label>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-floating mb-3">
+                    <input type="email" class="form-control" id="editEmail" placeholder="E-posta" required />
+                    <label for="editEmail"><i class="bi bi-envelope me-1"></i>E-posta</label>
+                  </div>
+                </div>
+                
+
+                
+                <div class="col-md-6">
+                  <div class="form-floating mb-3">
+                    <input type="password" class="form-control" id="editPassword" placeholder="Yeni Şifre" />
+                    <label for="editPassword"><i class="bi bi-key me-1"></i>Yeni Şifre</label>
+                    <div class="form-text">Değiştirmek istemiyorsanız boş bırakın</div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-floating mb-3">
+                    <input type="password" class="form-control" id="editPasswordConfirm" placeholder="Şifre Tekrar" />
+                    <label for="editPasswordConfirm"><i class="bi bi-key-fill me-1"></i>Şifre Tekrar</label>
+                  </div>
+                </div>
               </div>
             </form>
           </div>
-          <div class="modal-footer">
+          <div class="modal-footer border-0">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-outline-secondary rounded-pill px-4"
               data-bs-dismiss="modal"
             >
-              İptal
+              <i class="bi bi-x-circle me-1"></i>İptal
             </button>
-            <button type="button" class="btn btn-primary" id="saveProfileBtn">
-              Kaydet
+            <button type="button" class="btn btn-modern btn-modern-primary rounded-pill px-4" id="saveProfileBtn">
+              <i class="bi bi-check-circle me-1"></i>Kaydet
             </button>
           </div>
         </div>

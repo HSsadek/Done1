@@ -82,19 +82,16 @@ function renderUserProfile(userData) {
     // Profil bilgilerini güncelle
     document.getElementById('userName').textContent = userData.name;
     document.getElementById('userEmail').textContent = userData.email;
-    document.getElementById('userRole').textContent = userData.role;
     document.getElementById('profileImage').src = userData.profileImage;
     
     // Düzenleme formunu doldur
     document.getElementById('editName').value = userData.name;
     document.getElementById('editEmail').value = userData.email;
-    document.getElementById('editRole').value = userData.role;
     document.getElementById('editProfileImage').src = userData.profileImage;
     
     // Ayarlar sekmesi formunu doldur
     document.getElementById('settingsName').value = userData.name;
     document.getElementById('settingsEmail').value = userData.email;
-    document.getElementById('settingsRole').value = userData.role;
     document.getElementById('settingsProfileImage').src = userData.profileImage;
 }
 
@@ -459,7 +456,6 @@ async function saveProfile() {
     // Form verilerini al
     const name = document.getElementById('editName').value.trim();
     const email = document.getElementById('editEmail').value.trim();
-    const role = document.getElementById('editRole').value;
     const password = document.getElementById('editPassword').value;
     const passwordConfirm = document.getElementById('editPasswordConfirm').value;
     
@@ -496,7 +492,6 @@ async function saveProfile() {
     const profileData = {
         name: name,
         email: email,
-        role: role,
         password: password !== '' ? password : undefined,
         profileImage: profileImage
     };

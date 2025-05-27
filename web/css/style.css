@@ -796,3 +796,89 @@ body {
 .project-detail-panel.show::before {
     opacity: 1;
 }
+
+/* Profil sayfası profil resmi stili */
+.profile-image-large {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+}
+
+/* Modern profil sayfası stilleri */
+.rounded-4 {
+    border-radius: 1rem !important;
+}
+
+.profile-header-bg {
+    height: 150px;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+}
+
+.profile-image-container {
+    bottom: -50px;
+}
+
+.profile-tabs .nav-link {
+    border-radius: 2rem;
+    padding: 0.5rem 1.5rem;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.profile-tabs .nav-link:hover {
+    background-color: rgba(67, 97, 238, 0.1);
+}
+
+.profile-tabs .nav-link.active {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+}
+
+.form-control, .form-select {
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: #fff;
+    box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+    border-color: var(--primary-color);
+}
+
+.btn-modern {
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-modern-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    border: none;
+    color: white;
+}
+
+.textarea-height-100 {
+    height: 100px;
+}
+
+.camera-button {
+    bottom: 5px; 
+    right: 5px; 
+    width: 32px; 
+    height: 32px; 
+    padding: 0; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+}
