@@ -1,5 +1,70 @@
 /* Modern Proje Yönetim Sistemi Stil Dosyası */
 
+/* Modern Navbar Stilleri */
+.navbar-modern {
+  padding: 0.5rem 1rem;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.navbar-modern .navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-modern .navbar-brand i {
+  margin-right: 0.5rem;
+  font-size: 1.8rem;
+}
+
+.navbar-modern .nav-link {
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  margin: 0 0.2rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.navbar-modern .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.navbar-modern .nav-link.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.navbar-modern .nav-item {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-modern .nav-icon {
+  margin-right: 0.5rem;
+}
+
+.navbar-modern .user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+.navbar-modern .user-avatar:hover {
+  border-color: white;
+  transform: scale(1.1);
+}
+
+/* Navbar Arama Formu */
+.search-form {
+  width: 40%;
+}
+
 /* Loading Animasyonu Stilleri */
 .loading-container {
   position: fixed;

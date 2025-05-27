@@ -58,9 +58,34 @@ function closeModal(modalId, reloadPage = true) {
 // Proje ve görev verileri
 let currentProject = null;
 let tasks = [];
+let currentUserId = null;
+
+// Mevcut kullanıcı ID'sini al
+async function getCurrentUserId() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) return null;
+        
+        const response = await fetch('http://localhost:5000/api/auth/profile', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) return null;
+        
+        const user = await response.json();
+        return user._id || user.id;
+    } catch (error) {
+        console.error('Kullanıcı ID alınırken hata:', error);
+        return null;
+    }
+}
 
 // DOM yüklendikten sonra çalışacak fonksiyonlar
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Önce kullanıcı ID'sini al
+    currentUserId = await getCurrentUserId();
+    console.log('Mevcut kullanıcı ID:', currentUserId);
+    
     // URL'den proje ID'sini al
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('id');
@@ -554,6 +579,7 @@ async function loadProjectDetails(projectId) {
         showAlert('Proje detayları yüklenirken bir hata oluştu.', 'danger');
     }
 }
+
 function renderProjectDetails() {
     if (!currentProject) return;
     
@@ -572,6 +598,27 @@ function renderProjectDetails() {
     
     // Proje sahibi ve ekip üyelerini göster
     updateProjectTeam();
+    
+    // Butonların görünürlüğünü kontrol et (sadece proje sahibi için göster)
+    const isProjectOwner = checkIfUserIsProjectOwner();
+    
+    // Butonları bul
+    const editProjectButton = document.getElementById('editProjectButton');
+    const addTeamMemberButton = document.getElementById('addTeamMemberButton');
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    
+    // Butonların görünürlüğünü ayarla
+    if (editProjectButton) {
+        editProjectButton.style.display = isProjectOwner ? 'inline-block' : 'none';
+    }
+    
+    if (addTeamMemberButton) {
+        addTeamMemberButton.style.display = isProjectOwner ? 'inline-block' : 'none';
+    }
+    
+    if (addTaskBtn) {
+        addTaskBtn.style.display = isProjectOwner ? 'inline-block' : 'none';
+    }
 }
 
 // Proje düzenleme modalını aç
@@ -768,6 +815,20 @@ function updateProjectStats() {
             </div>
         </div>
     `;
+}
+
+// Kullanıcının proje sahibi olup olmadığını kontrol et
+function checkIfUserIsProjectOwner() {
+    if (!currentProject || !currentProject.owner || !currentUserId) {
+        return false;
+    }
+    
+    // Proje sahibinin ID'sini al (API yanıt formatına göre farklı alanlar olabilir)
+    const ownerId = currentProject.owner._id || currentProject.owner.id || currentProject.owner;
+    
+    // Kullanıcı ID'si ile proje sahibi ID'sini karşılaştır
+    console.log('Proje sahibi kontrolü:', { ownerId, currentUserId });
+    return ownerId === currentUserId;
 }
 
 // Başlangıç ve bitiş tarihlerini göster

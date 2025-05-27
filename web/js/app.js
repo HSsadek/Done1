@@ -382,23 +382,45 @@ async function loadProjects() {
         // Eğer API yanıtı çok hızlıysa, loading animasyonu hiç gösterilmeyecek
         loadingDelay = apiResponseTime;
         
+        // Kullanıcı ID'sini al
+        const userId = await getUserIdFromProfile(token);
+        
         // Projeleri formatla
         const formattedProjects = projects.map(p => {
             const taskCount = p.tasks ? p.tasks.length : 0;
             const completedTaskCount = p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0;
             const isCompleted = taskCount > 0 && taskCount === completedTaskCount;
+            
+            // Proje sahibi bilgisini işle
+            let owner = null;
+            if (p.owner) {
+                if (typeof p.owner === 'string') {
+                    // Sadece ID varsa
+                    owner = { id: p.owner, name: p.owner === userId ? 'Siz' : 'Kullanıcı' };
+                } else if (typeof p.owner === 'object') {
+                    // Nesne olarak geliyorsa
+                    const ownerId = p.owner._id || p.owner.id;
+                    owner = {
+                        id: ownerId,
+                        name: p.owner.name || p.owner.email || p.owner.username || (ownerId === userId ? 'Siz' : 'Kullanıcı')
+                    };
+                }
+            }
 
             return {
-                id: p._id,
-                name: p.title,
-                description: p.description,
+                id: p._id || p.id,
+                name: p.title || p.name,
+                description: p.description || '',
                 taskCount: taskCount,
                 completedTaskCount: completedTaskCount,
                 isCompleted: isCompleted,
+                owner: owner,
+                isOwnedByCurrentUser: owner && (owner.id === userId || owner.name === 'Siz'),
                 teamMembers: p.team ? p.team.map(member => ({
-                    name: member.name,
+                    id: member._id || member.id,
+                    name: member.name || member.email || member.username,
                     email: member.email,
-                    profileImage: member.profileImage
+                    profileImage: member.profileImage || member.avatar || member.photo
                 })) : []
             };
         });
@@ -475,12 +497,20 @@ function createProjectCard(project) {
     // İlerleme yüzdesini hesapla
     const progress = project.taskCount > 0 ? Math.round((project.completedTaskCount / project.taskCount) * 100) : 0;
     
-    col.innerHTML = `
-        <div class="card project-card shadow-lg border-0 rounded-4 position-relative project-modern-card" style="cursor:pointer; transition: box-shadow .2s;">
+    // Kullanıcının kendi projesi ise özel bir sınıf ekle
+    const isOwnProject = project.isOwnedByCurrentUser;
+    
+    // Proje kartı HTML'ini oluştur
+    let cardHtml = `
+        <div class="card project-card shadow-lg border-0 rounded-4 position-relative project-modern-card ${isOwnProject ? 'my-project' : ''}" style="cursor:pointer; transition: box-shadow .2s;${isOwnProject ? ' border-left: 4px solid #28a745 !important;' : ''}">
             <div class="card-body pb-4 d-flex flex-column">
                 <div class="d-flex align-items-center mb-2">
                     <div class="flex-grow-1">
                         <h5 class="card-title fw-bold mb-1 text-primary" style="display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;"><i class="bi bi-folder2-open me-2"></i>${project.name}</h5>
+                        <div class="d-flex align-items-center">
+                            <div class="small ${isOwnProject ? 'text-success fw-medium' : 'text-muted'}"><i class="bi bi-person-circle me-1"></i>Proje Sahibi: <span class="${isOwnProject ? 'fw-bold' : 'fw-medium'}">${project.owner && project.owner.name ? project.owner.name : 'Bilinmiyor'}</span></div>
+                            ${isOwnProject ? '<span class="badge bg-success ms-2"><i class="bi bi-star-fill me-1"></i>Sizin Projeniz</span>' : ''}
+                        </div>
                     </div>
                     <button class="btn btn-danger btn-sm delete-project-btn border-0 ms-2 position-absolute top-0 end-0 mt-2 me-2" data-project-id="${project.id}" onclick="event.stopPropagation();"><i class="bi bi-trash"></i></button>
                 </div>
@@ -488,54 +518,77 @@ function createProjectCard(project) {
                 <div class="d-flex align-items-center mb-3">
                     <span class="me-2 small text-muted"><i class="bi bi-people"></i> Ekip:</span>
                     <div class="team-members-avatars d-flex align-items-center">
-                        ${(Array.isArray(project.teamMembers) ? project.teamMembers.slice(0,5) : []).map((member, index) => {
-                            let img = '';
-                            let name = '';
-                            if (typeof member === 'object' && member !== null) {
-                                img = member.profileImage || '';
-                                name = member.name || member.email || '';
-                            } else {
-                                name = member;
-                            }
-                            if (img) {
-                                return `<img src="${img}" class="rounded-circle me-1 border" alt="${name}" title="${name}" style="width:32px;height:32px;object-fit:cover;">`;
-                            } else {
-                                const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
-                                return `<span class="rounded-circle bg-primary text-white d-inline-flex justify-content-center align-items-center me-1 border" title="${name}" style="width:32px;height:32px;font-size:1rem;">${initials}</span>`;
-                            }
-                        }).join('')}
-                        ${(Array.isArray(project.teamMembers) && project.teamMembers.length > 5) ? `<span class="badge bg-secondary ms-1">+${project.teamMembers.length-5}</span>` : ''}
+    `;
+    
+    // Ekip üyeleri avatarları
+    if (Array.isArray(project.teamMembers) && project.teamMembers.length > 0) {
+        const teamMembersToShow = project.teamMembers.slice(0, 5);
+        teamMembersToShow.forEach(member => {
+            let img = '';
+            let name = '';
+            if (typeof member === 'object' && member !== null) {
+                img = member.profileImage || '';
+                name = member.name || member.email || '';
+            } else {
+                name = member;
+            }
+            
+            if (img) {
+                cardHtml += `<img src="${img}" class="rounded-circle me-1 border" alt="${name}" title="${name}" style="width:32px;height:32px;object-fit:cover;">`;
+            } else {
+                const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
+                cardHtml += `<span class="rounded-circle bg-primary text-white d-inline-flex justify-content-center align-items-center me-1 border" title="${name}" style="width:32px;height:32px;font-size:1rem;">${initials}</span>`;
+            }
+        });
+        
+        // Daha fazla üye varsa badge göster
+        if (project.teamMembers.length > 5) {
+            cardHtml += `<span class="badge bg-secondary ms-1">+${project.teamMembers.length-5}</span>`;
+        }
+    }
+    
+    // Kartın geri kalan kısmı
+    cardHtml += `
                     </div>
                     <span class="ms-2 small text-muted">${Array.isArray(project.teamMembers) ? project.teamMembers.length : 0} üye</span>
                 </div>
-                ${project.isCompleted ? `
+                
+                <!-- İlerleme çubuğu - tüm projeler için gösterilecek -->
                 <div class="progress mb-2" style="height: 8px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 100%" 
-                        aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
-                    </div>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mt-auto">
-                    <span class="text-muted small"><i class="bi bi-check-circle-fill"></i> Tüm görevler tamamlandı</span>
-                    <a href="project.html?id=${project.id}" class="btn btn-outline-success btn-sm px-3" onclick="event.stopPropagation();">
-                        <i class="bi bi-kanban me-1"></i> Görev Panosu
-                    </a>
-                </div>
-                ` : `
-                <div class="progress mb-2" style="height: 8px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: ${progress}%" 
+                    <div class="progress-bar ${progress === 100 ? 'bg-success' : 'bg-info'}" role="progressbar" style="width: ${progress}%" 
                         aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
                     </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-auto">
-                    <span class="text-muted small"><i class="bi bi-check-circle-fill"></i> ${project.completedTaskCount}/${project.taskCount} görev tamamlandı</span>
-                    <a href="project.html?id=${project.id}" class="btn btn-outline-primary btn-sm px-3" onclick="event.stopPropagation();">
+    `;
+    
+    // Görev durumu bilgisi
+    if (project.taskCount > 0) {
+        cardHtml += `
+                    <span class="text-muted small">
+                        <i class="bi ${progress === 100 ? 'bi-check-circle-fill text-success' : 'bi-list-check'}"></i> 
+                        ${project.completedTaskCount}/${project.taskCount} görev tamamlandı (${progress}%)
+                    </span>
+        `;
+    } else {
+        cardHtml += `
+                    <span class="text-muted small">
+                        <i class="bi bi-list-check"></i> Henüz görev yok
+                    </span>
+        `;
+    }
+    
+    // Görev panosu butonu
+    cardHtml += `
+                    <a href="project.html?id=${project.id}" class="btn btn-outline-${progress === 100 ? 'success' : 'primary'} btn-sm px-3" onclick="event.stopPropagation();">
                         <i class="bi bi-kanban me-1"></i> Görev Panosu
                     </a>
                 </div>
-                `}
             </div>
         </div>
     `;
+    
+    col.innerHTML = cardHtml;
     
     // Kartın tamamına tıklama olayını ekle
     col.querySelector('.card').addEventListener('click', function(e) {
@@ -566,7 +619,9 @@ function showProjectDetails(project) {
     document.getElementById('projectDetailDescription').textContent = project.description;
     document.getElementById('projectDetailTaskCount').textContent = project.taskCount;
     document.getElementById('projectDetailCompletedTaskCount').textContent = project.completedTaskCount;
-    document.getElementById('projectDetailTeam').innerHTML = (Array.isArray(project.teamMembers) ? project.teamMembers : []).map(member => `<span class='badge bg-primary me-1'>${member}</span>`).join('');
+    // Ekip üyelerini gösterme kısmını kaldırdık
+    // document.getElementById('projectDetailTeam').innerHTML = (Array.isArray(project.teamMembers) ? project.teamMembers : []).map(member => `<span class='badge bg-primary me-1'>${member}</span>`).join('');
+    
     // Modalı aç
     const modal = new bootstrap.Modal(document.getElementById('projectDetailModal'));
     modal.show();

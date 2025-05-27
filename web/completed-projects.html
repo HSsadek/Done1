@@ -15,44 +15,63 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary navbar-modern sticky-top">
       <div class="container">
-        <a class="navbar-brand" href="index.html">Proje Yönetim Sistemi</a>
+        <a class="navbar-brand" href="index.html">
+          <i class="bi bi-kanban-fill"></i>
+          Proje Yönetim Sistemi
+        </a>
         <button
           class="navbar-toggler"
           type="button"
           data-bs-toggle="collapse"
           data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Menüyü Aç/Kapat"
+          title="Menüyü Aç/Kapat"
         >
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-          <form class="d-flex mx-auto" style="width: 40%">
+          <form class="d-flex search-form mx-auto">
             <div class="input-group">
               <input
-                type="search"
                 class="form-control"
+                type="search"
+                placeholder="Proje Ara..."
+                aria-label="Ara"
                 id="projectSearch"
-                placeholder="Proje ara..."
-                aria-label="Proje ara"
               />
-              <button class="btn btn-light" type="submit">
+              <button class="btn btn-light" type="submit" title="Ara">
                 <i class="bi bi-search"></i>
               </button>
             </div>
           </form>
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <a class="nav-link" href="index.html">Dashboard</a>
+              <a class="nav-link" href="index.html">
+                <i class="bi bi-house-door nav-icon"></i>
+                Dashboard
+              </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link active" href="completed-projects.html"
-                >Tamamlanan Projeler</a
+              <a
+                class="nav-link active"
+                aria-current="page"
+                href="completed-projects.html"
               >
+                <i class="bi bi-check-circle nav-icon"></i>
+                Tamamlanan Projeler
+              </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="profile.html">Profil</a>
+              <a class="nav-link" href="profile.html">
+                <i class="bi bi-person nav-icon"></i>
+                Profil
+              </a>
             </li>
+
           </ul>
         </div>
       </div>
@@ -96,8 +115,7 @@
               <span
                 >Tamamlanan Görev:
                 <span id="projectDetailCompletedTaskCount"></span></span
-              ><br />
-              <div id="projectDetailTeam"></div>
+              >
             </div>
           </div>
         </div>
