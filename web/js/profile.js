@@ -516,15 +516,27 @@ async function saveProfile() {
     };
     
     try {
-        // Gerçek uygulamada burada API çağrısı yapılacak
-        // const response = await fetch(API_URL.profile, {
-        //     method: 'PUT',
-        //     headers: {
-        //         'Content-Type': 'application/json'
-        //     },
-        //     body: JSON.stringify(profileData)
-        // });
-        // const updatedProfile = await response.json();
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showAlert('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.', 'danger');
+            return;
+        }
+
+        // API çağrısı
+        const response = await fetch(API_URL.profile, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(profileData)
+        });
+
+        if (!response.ok) {
+            throw new Error('Profil güncellenirken bir hata oluştu');
+        }
+
+        const result = await response.json();
         
         // Başarılı güncelleme sonrası
         showAlert('Profil bilgileriniz başarıyla güncellendi!', 'success');
@@ -532,13 +544,30 @@ async function saveProfile() {
         // Profil bilgilerini güncelle
         document.getElementById('userName').textContent = name;
         document.getElementById('userEmail').textContent = email;
-        document.getElementById('userRole').textContent = role;
+        
+        // userRole elementini kontrol et
+        const userRoleElement = document.getElementById('userRole');
+        if (userRoleElement) {
+            // role değişkenini tanımla - editRole elementinden al
+            const editRoleElement = document.getElementById('editRole');
+            const role = editRoleElement ? editRoleElement.value : 'user';
+            userRoleElement.textContent = role;
+        }
+        
         document.getElementById('profileImage').src = profileImage;
         
         // Ayarlar sekmesindeki profil bilgilerini de güncelle
         document.getElementById('settingsName').value = name;
         document.getElementById('settingsEmail').value = email;
-        document.getElementById('settingsRole').value = role;
+        
+        // settingsRole elementini kontrol et
+        const settingsRoleElement = document.getElementById('settingsRole');
+        if (settingsRoleElement) {
+            const editRoleElement = document.getElementById('editRole');
+            const role = editRoleElement ? editRoleElement.value : 'user';
+            settingsRoleElement.value = role;
+        }
+        
         document.getElementById('settingsProfileImage').src = profileImage;
         
         // Modal'ı kapat

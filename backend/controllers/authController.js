@@ -191,3 +191,22 @@ exports.searchUsers = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// Tüm kullanıcıların şifresini aaa123 yap (geliştirme amaçlı)
+exports.resetAllPasswords = async (req, res) => {
+    try {
+        const users = await User.find();
+        
+        for (let user of users) {
+            user.password = 'aaa123';
+            await user.save();
+        }
+        
+        res.json({ 
+            message: `${users.length} kullanıcının şifresi 'aaa123' olarak güncellendi.`,
+            updatedUsers: users.length
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
