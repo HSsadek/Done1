@@ -1,6 +1,41 @@
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 
+// Proje durumunu görevlere göre güncelle
+const updateProjectStatus = async (projectId) => {
+    try {
+        const project = await Project.findById(projectId);
+        if (!project) return;
+
+        const tasks = await Task.find({ project: projectId });
+        
+        if (tasks.length === 0) {
+            // Görev yoksa "Not Started"
+            project.status = 'Not Started';
+        } else {
+            const completedTasks = tasks.filter(task => task.status === 'Tamamlandı');
+            const inProgressTasks = tasks.filter(task => 
+                task.status === 'Devam Etmekte' || task.status === 'Test Edilecek'
+            );
+            
+            if (completedTasks.length === tasks.length) {
+                // Tüm görevler tamamlandıysa "Completed"
+                project.status = 'Completed';
+            } else if (inProgressTasks.length > 0 || completedTasks.length > 0) {
+                // Bazı görevler devam ediyorsa veya tamamlandıysa "In Progress"
+                project.status = 'In Progress';
+            } else {
+                // Sadece "Yapılacak" görevler varsa "Not Started"
+                project.status = 'Not Started';
+            }
+        }
+        
+        await project.save();
+    } catch (error) {
+        console.error('Proje durumu güncellenirken hata:', error);
+    }
+};
+
 // Get all tasks of a project
 exports.getProjectTasks = async (req, res) => {
     try {
@@ -69,6 +104,8 @@ exports.createTask = async (req, res) => {
             .populate('startDate', 'name email')
            .populate('endDate', 'name email')
         
+        // Proje durumunu güncelle
+        await updateProjectStatus(req.params.projectId);
 
         res.status(201).json(populatedTask);
     } catch (error) {
@@ -110,6 +147,9 @@ exports.updateTask = async (req, res) => {
         ).populate('assignedTo', 'name email')
          .populate('project', 'title');
 
+        // Proje durumunu güncelle
+        await updateProjectStatus(task.project);
+
         res.json(updatedTask);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -132,7 +172,12 @@ exports.deleteTask = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized to delete this task' });
         }
 
+        const projectId = task.project;
         await task.deleteOne();
+        
+        // Proje durumunu güncelle
+        await updateProjectStatus(projectId);
+        
         res.json({ message: 'Task removed' });
     } catch (error) {
         res.status(500).json({ message: error.message });

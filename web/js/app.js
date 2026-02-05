@@ -389,7 +389,8 @@ async function loadProjects() {
         const formattedProjects = projects.map(p => {
             const taskCount = p.tasks ? p.tasks.length : 0;
             const completedTaskCount = p.tasks ? p.tasks.filter(task => task.status === 'Tamamlandı').length : 0;
-            const isCompleted = taskCount > 0 && taskCount === completedTaskCount;
+            // Backend'den gelen status'a göre tamamlanma durumunu belirle
+            const isCompleted = p.status === 'Completed';
             
             // Proje sahibi bilgisini işle
             let owner = null;
